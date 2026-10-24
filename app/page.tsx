@@ -1,36 +1,22 @@
-import { asc } from "drizzle-orm";
-import Link from "next/link";
 import { Suspense } from "react";
-import { db } from "@/lib/db";
-import { composers } from "@/lib/schema";
+import ComposerCloud from "@/components/ComposerCloud";
+import { getComposersWithCounts } from "@/lib/queries";
 
 export default function Home() {
   return (
     <main className="p-6">
-      <h1 className="text-xl mb-4">Composers</h1>
+      <h1 className="sr-only">Composers</h1>
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
-        <ComposerList />
+        <Cloud />
       </Suspense>
     </main>
   );
 }
 
-async function ComposerList() {
-  const rows = await db
-    .select({ id: composers.id, name: composers.name })
-    .from(composers)
-    .orderBy(asc(composers.name));
-
-  if (rows.length === 0) return <p className="text-muted">No composers yet.</p>;
-  return (
-    <ul>
-      {rows.map((c) => (
-        <li key={c.id}>
-          <Link href={`/composer/${c.id}`} className="hover:underline">
-            {c.name}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
+async function Cloud() {
+  const composers = await getComposersWithCounts();
+  if (composers.length === 0) {
+    return <p className="text-muted">No composers yet.</p>;
+  }
+  return <ComposerCloud composers={composers} />;
 }
