@@ -21,6 +21,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Composer cloud on `/`: short names in IM Fell English, sized 16–42px by number of works with at least one recording, placed at the same spot on every visit (seeded from each composer's id) without overlapping; underline and a "Name · Era · N recorded works" tooltip on hover
 - The cloud is 560px tall and grows taller as the catalogue grows, so names keep room to spread out
 - `GET /api/composers` returns every composer with their count of recorded works
+- Works list on `/composer/[id]`: works grouped by genre (alphabetical) and sorted naturally by catalogue number (`K. 9` before `K. 550`, `Op. 10 No. 2` before `Op. 10 No. 12`); genre filter chips; a dot marks works with recordings and works without are faded; header with back arrow, serif name, era label, and an "Edit" link when logged in
+- `GET /api/works?composer_id=` returns a composer's works with a has-recording flag (400 for a malformed id)
 
 ### Fixed
 - Component tests no longer see leftover output from earlier tests (Testing Library cleanup now runs after each test)

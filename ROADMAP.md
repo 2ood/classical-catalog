@@ -4,20 +4,12 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 
 ## In Progress
 
-### Milestone 3: Works list
-- [ ] Catalogue-number natural sort (`K. 9` < `K. 550`, `Op. 10 No. 2`) — test-first
-- [ ] Group by genre, genre header styling
-- [ ] `GenreFilter` chips (active/inactive states)
-- [ ] Recording dot; 35% opacity for works without recordings
-- [ ] Header with serif name, era label, back arrow, "Edit" link when logged in
-- [ ] `GET /api/works?composer_id=`
-
-## Planned
-
 ### Milestone 4: Player — recordings pane
 - [ ] `PerformerTiles` — 40px circles with initials, active state
 - [ ] Hover ✕ delete when logged in; `DELETE /api/recordings/[id]`
 - [ ] Embed fills remaining pane height; two-column layout with 1px divider
+
+## Planned
 
 ### Milestone 5: Player — score pane
 - [ ] `lib/blob.ts`; `POST /api/scores/upload`, `DELETE /api/scores/[id]`
@@ -36,6 +28,19 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 - [ ] `vercel --prod` and production smoke test
 
 ## Completed
+
+### Milestone 3: Works list (completed 2026-10-25)
+- [x] Catalogue-number natural sort (`K. 9` < `K. 550`, `Op. 10 No. 2`) — test-first
+- [x] Group by genre, genre header styling
+- [x] `GenreFilter` chips (active/inactive states)
+- [x] Recording dot; 35% opacity for works without recordings
+- [x] Header with serif name, era label, back arrow, "Edit" link when logged in
+- [x] `GET /api/works?composer_id=`
+- [x] Manual verification checklist — passed
+- Decisions:
+  - Natural sort via `Intl.Collator` (numeric, case-insensitive); works without a catalogue number sort last, then by title
+  - Genre groups are alphabetical; the filter is client state (kept on back-navigation), chips hidden when there is only one genre
+  - "Edit" links to `/admin/composer/[id]`, which 404s until Milestone 6
 
 ### Milestone 2: Composer cloud (completed 2026-10-25)
 - [x] Seeded PRNG from composer UUID (deterministic, test-first)
