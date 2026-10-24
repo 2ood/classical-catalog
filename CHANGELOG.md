@@ -18,3 +18,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `proxy.ts`: `/admin` redirects anonymous visitors to `/login`; anonymous POST/PATCH/DELETE API calls get 401
 - Plain composer list (`/`), works list (`/composer/[id]`), and player (`/work/[id]`) with performer buttons switching a YouTube or Spotify embed
 - `POST /api/recordings` with input validation (performer required, year a whole number, URL must match the chosen media type) and an add-recording form shown only when logged in
+- Composer cloud on `/`: short names in IM Fell English, sized 16–42px by number of works with at least one recording, placed at the same spot on every visit (seeded from each composer's id) without overlapping; underline and a "Name · Era · N recorded works" tooltip on hover
+- The cloud is 560px tall and grows taller as the catalogue grows, so names keep room to spread out
+- `GET /api/composers` returns every composer with their count of recorded works
+
+### Fixed
+- Component tests no longer see leftover output from earlier tests (Testing Library cleanup now runs after each test)

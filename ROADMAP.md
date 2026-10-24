@@ -4,15 +4,6 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 
 ## In Progress
 
-### Milestone 2: Composer cloud
-- [ ] Seeded PRNG from composer UUID (deterministic, test-first)
-- [ ] Font-size scale 16–42px from count of works with ≥1 recording (test-first)
-- [ ] Collision-nudge loop, max 20 iterations per composer (test-first: no overlapping boxes)
-- [ ] `ComposerCloud` render, underline on hover, tooltip "Name · Era · …"
-- [ ] `GET /api/composers` with recording counts
-
-## Planned
-
 ### Milestone 3: Works list
 - [ ] Catalogue-number natural sort (`K. 9` < `K. 550`, `Op. 10 No. 2`) — test-first
 - [ ] Group by genre, genre header styling
@@ -20,6 +11,8 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 - [ ] Recording dot; 35% opacity for works without recordings
 - [ ] Header with serif name, era label, back arrow, "Edit" link when logged in
 - [ ] `GET /api/works?composer_id=`
+
+## Planned
 
 ### Milestone 4: Player — recordings pane
 - [ ] `PerformerTiles` — 40px circles with initials, active state
@@ -43,6 +36,19 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 - [ ] `vercel --prod` and production smoke test
 
 ## Completed
+
+### Milestone 2: Composer cloud (completed 2026-10-25)
+- [x] Seeded PRNG from composer UUID (deterministic, test-first)
+- [x] Font-size scale 16–42px from count of works with ≥1 recording (test-first)
+- [x] Collision-nudge loop, max 20 iterations per composer (test-first: no overlapping boxes)
+- [x] `ComposerCloud` render, underline on hover, tooltip "Name · Era · …"
+- [x] `GET /api/composers` with recording counts
+- [x] Manual verification checklist — passed
+- Decisions:
+  - Layout runs on the server from estimated text boxes (0.55em per character), so there is no layout shift; horizontal positions are % of a 960px-wide area
+  - Cloud height grows with the catalogue (word boxes cover at most 25% of the area, minimum 560px); a fixed height cannot fit large catalogues without overlaps
+  - Each nudge iteration picks the best of four push-outs plus one seeded random jump; 0 overlaps in 9,000 stress layouts of 20–80 composers
+  - Tooltip reads "Mozart · Classical · 2 recorded works" (CSS-only); per-genre counts like "41 symphonies" left out
 
 ### Milestone 1: Walking skeleton (completed 2026-10-25)
 End-to-end slice on real data: composer list → works list → player with a working embed.
