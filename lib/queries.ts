@@ -1,5 +1,5 @@
 import "server-only";
-import { asc, countDistinct, eq } from "drizzle-orm";
+import { asc, countDistinct, eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import { composers, recordings, works } from "./schema";
 
@@ -18,4 +18,21 @@ export function getComposersWithCounts() {
     .leftJoin(recordings, eq(recordings.workId, works.id))
     .groupBy(composers.id)
     .orderBy(asc(composers.name));
+}
+
+/** A composer's works, each flagged if it has ≥1 recording (unsorted). */
+export function getWorksForComposer(composerId: string) {
+  return db
+    .select({
+      id: works.id,
+      catalogueNum: works.catalogueNum,
+      title: works.title,
+      genre: works.genre,
+      key: works.key,
+      hasRecording: sql<boolean>`count(${recordings.id}) > 0`,
+    })
+    .from(works)
+    .leftJoin(recordings, eq(recordings.workId, works.id))
+    .where(eq(works.composerId, composerId))
+    .groupBy(works.id);
 }
