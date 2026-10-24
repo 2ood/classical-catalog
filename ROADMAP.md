@@ -2,23 +2,7 @@
 
 Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every milestone is test-driven (Vitest) and ends with a manual verification checklist run against `npm run dev`.
 
-## Planned
-
-### Milestone 1: Walking skeleton (target: 2026-10-25)
-End-to-end slice on real data: composer list → works list → player with a working embed.
-- [ ] Scaffold with `create-next-app@latest` (TypeScript, App Router, Tailwind v4, ESLint)
-- [ ] Add Prettier + `eslint-config-prettier`, Vitest + Testing Library, `npm test` / `format` scripts
-- [ ] Design tokens in `app/globals.css` `@theme`; Inter + IM Fell English via `next/font`
-- [ ] `lib/schema.ts` (composers, works, recordings, scores), `lib/db.ts` (Neon serverless + Drizzle), `drizzle.config.ts`, first migration applied to Neon
-- [ ] `scripts/seed.ts` — sample composers, works, and YouTube + Spotify recordings (run with tsx)
-- [ ] `lib/media.ts` — `extractYouTubeId`, `extractSpotifyId` (track/album/playlist), test-first
-- [ ] Auth: `lib/session.ts`, `POST /api/auth/login` (env-var check, test-first), `POST /api/auth/logout`, `/login` page
-- [ ] `proxy.ts` — `/admin` redirects to `/login`, unauthenticated mutating API calls get 401
-- [ ] `/` — plain list of composers linking to `/composer/[id]`
-- [ ] `/composer/[id]` — plain list of works linking to `/work/[id]`
-- [ ] `/work/[id]` — `MediaEmbed` for the selected recording; plain performer buttons to switch
-- [ ] `POST /api/recordings` + `AddRecordingForm`, shown only when logged in
-- [ ] Manual verification checklist handed over with the local dev server running
+## In Progress
 
 ### Milestone 2: Composer cloud
 - [ ] Seeded PRNG from composer UUID (deterministic, test-first)
@@ -26,6 +10,8 @@ End-to-end slice on real data: composer list → works list → player with a wo
 - [ ] Collision-nudge loop, max 20 iterations per composer (test-first: no overlapping boxes)
 - [ ] `ComposerCloud` render, underline on hover, tooltip "Name · Era · …"
 - [ ] `GET /api/composers` with recording counts
+
+## Planned
 
 ### Milestone 3: Works list
 - [ ] Catalogue-number natural sort (`K. 9` < `K. 550`, `Op. 10 No. 2`) — test-first
@@ -57,6 +43,30 @@ End-to-end slice on real data: composer list → works list → player with a wo
 - [ ] `vercel --prod` and production smoke test
 
 ## Completed
+
+### Milestone 1: Walking skeleton (completed 2026-10-25)
+End-to-end slice on real data: composer list → works list → player with a working embed.
+- [x] Scaffold with `create-next-app@latest` (TypeScript, App Router, Tailwind v4, ESLint)
+- [x] Add Prettier + `eslint-config-prettier`, Vitest + Testing Library, `npm test` / `format` scripts
+- [x] Design tokens in `app/globals.css` `@theme`; Inter + IM Fell English via `next/font`
+- [x] `lib/schema.ts` (composers, works, recordings, scores), `lib/db.ts` (Neon serverless + Drizzle), `drizzle.config.ts`, first migration applied to Neon
+- [x] `scripts/seed.ts` — sample composers, works, and YouTube + Spotify recordings (run with tsx)
+- [x] `lib/media.ts` — `extractYouTubeId`, `extractSpotifyId` (track/album/playlist), test-first
+- [x] Auth: `lib/session.ts`, `POST /api/auth/login` (env-var check, test-first), `POST /api/auth/logout`, `/login` page
+- [x] `proxy.ts` — `/admin` redirects to `/login`, unauthenticated mutating API calls get 401
+- [x] `/` — plain list of composers linking to `/composer/[id]`
+- [x] `/composer/[id]` — plain list of works linking to `/work/[id]`
+- [x] `/work/[id]` — `MediaEmbed` for the selected recording; plain performer buttons to switch
+- [x] `POST /api/recordings` + `AddRecordingForm`, shown only when logged in
+- [x] Manual verification checklist handed over with the local dev server running — passed
+- [x] Header log in / log out link (`AuthStatus`) — added so the owner can log out; not in the original plan
+- Decisions:
+  - Next.js 16.4 ships with Cache Components + Partial Prefetching on; every DB / cookie read sits inside `<Suspense>`
+  - Session read (`isLoggedIn`) uses `"use cache: private"` because iron-session checks the TTL with `Date.now()`
+  - Route handlers re-check the session themselves; `proxy.ts` is the first gate, not the only one
+  - Invalid ids render the 404 UI with status 200 (streaming has already started) — accepted for a personal app
+  - `@types/node` bumped to 22 for Vitest 5
+
 - [x] Project initialized — README, CHANGELOG, ROADMAP created (2026-10-25)
 - [x] Proposal revised: env-var auth, latest Next.js, Neon serverless + Drizzle, tsx, Tailwind v4, Vitest (2026-10-25)
 

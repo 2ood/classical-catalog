@@ -35,12 +35,12 @@ Full specification: [classical-catalog-proposal.md](classical-catalog-proposal.m
 ### Installation
 
 ```bash
-git clone [TODO: repo URL]
+git clone https://github.com/2ood/classical-catalog.git
 cd classical-catalog
 npm install
 cp .env.example .env.local   # then fill in the values below
-npm run db:migrate           # [TODO: confirm script name once scaffolded]
-npx tsx scripts/seed.ts      # optional sample data
+npm run db:migrate           # apply drizzle/ migrations to Neon
+npm run db:seed              # optional sample data (skips a non-empty DB)
 npm run dev
 ```
 
@@ -54,7 +54,7 @@ ADMIN_USERNAME=
 ADMIN_PASSWORD_HASH=     # node -e "console.log(require('bcryptjs').hashSync('pw',10))"
 ```
 
-bcrypt hashes contain `$` — wrap `ADMIN_PASSWORD_HASH` in single quotes in `.env.local`.
+bcrypt hashes contain `$`, which Next.js expands as a variable reference — escape every `$` as `\$` in `.env.local` (single quotes do not prevent expansion). Values pasted into the Vercel dashboard need no escaping.
 
 ### Scripts
 
@@ -62,8 +62,11 @@ bcrypt hashes contain `$` — wrap `ADMIN_PASSWORD_HASH` in single quotes in `.e
 npm run dev       # local dev server
 npm test          # Vitest
 npm run lint      # ESLint
-npm run format    # Prettier  [TODO: confirm once scaffolded]
+npm run format    # Prettier
+npm run db:generate  # generate a migration after editing lib/schema.ts
 ```
+
+`npm run build` needs `DATABASE_URL` set (the Neon client is created at import time).
 
 ## Project Structure
 
@@ -72,6 +75,7 @@ app/          routes: /, /composer/[id], /work/[id], /login, /admin/*, /api/*
 components/   UI components (ComposerCloud, WorksList, ScoreViewer, MediaEmbed, ...)
 lib/          db client, Drizzle schema, session, blob and media-URL helpers
 scripts/      tsx scripts (sample-data seed)
+drizzle/      generated SQL migrations (npm run db:generate)
 proxy.ts      auth guard for /admin and mutating API routes
 ```
 
