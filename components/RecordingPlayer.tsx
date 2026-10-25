@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useMovementRequests, usePlayerSync } from "./PlayerSync";
 import RecordingMovementEditor from "./RecordingMovementEditor";
-import SpotifyEmbed from "./SpotifyEmbed";
+import SpotifyConnectPlayer from "./SpotifyConnectPlayer";
 import YouTubePlayer, { type YouTubeHandle } from "./YouTubePlayer";
 import { extractYouTubeId } from "@/lib/media";
 import {
@@ -15,9 +15,10 @@ import type { Recording } from "@/lib/schema";
 
 /**
  * Plays one recording and keeps it in step with the score by movement:
- * a movement chosen in the score seeks the video (YouTube) or loads its
- * track (Spotify); a playing YouTube video turns the score at each new
- * movement. Render with `key={recording.id}` so state resets per recording.
+ * a movement chosen in the score seeks the YouTube video, and a playing
+ * video turns the score at each new movement (Spotify recordings sync in
+ * SpotifyConnectPlayer). Render with `key={recording.id}` so state resets
+ * per recording.
  */
 export default function RecordingPlayer({
   recording,
@@ -27,7 +28,6 @@ export default function RecordingPlayer({
   const { movements, select } = usePlayerSync();
   const youtube = useRef<YouTubeHandle>(null);
   const lastMovement = useRef<string | null>(null);
-  const [track, setTrack] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const starts = recording.movementStarts;
 
@@ -36,8 +36,6 @@ export default function RecordingPlayer({
     if (recording.mediaType === "youtube" && typeof start === "number") {
       lastMovement.current = movementId;
       youtube.current?.seekTo(start);
-    } else if (recording.mediaType === "spotify" && typeof start === "string") {
-      setTrack(start);
     }
   });
 
@@ -90,10 +88,7 @@ export default function RecordingPlayer({
       )}
       <div className="flex-1 min-h-0">
         {recording.mediaType === "spotify" ? (
-          <SpotifyEmbed
-            url={track ?? recording.mediaUrl}
-            title={recording.performer}
-          />
+          <SpotifyConnectPlayer recording={recording} />
         ) : videoId ? (
           <YouTubePlayer ref={youtube} videoId={videoId} onTime={handleTime} />
         ) : (
