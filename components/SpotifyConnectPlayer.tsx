@@ -1,11 +1,12 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useMovementRequests, usePlayerSync } from "./PlayerSync";
 import SpotifyEmbed from "./SpotifyEmbed";
 import { useSpotifyPlayback } from "./SpotifyPlayback";
 import { extractSpotifyId } from "@/lib/media";
+import { recordingTrackIds } from "@/lib/queue";
 import { movementForTrack } from "@/lib/spotify";
 import type { Recording } from "@/lib/schema";
 
@@ -20,8 +21,14 @@ const button = "px-3 py-1 border border-border hover:bg-surface";
  */
 export default function SpotifyConnectPlayer({
   recording,
+  autoplay = false,
+  onEnded,
 }: {
   recording: Recording;
+  /** Start playing once connected (playing through a performer). */
+  autoplay?: boolean;
+  /** Spotify moved past the recording's own tracks. */
+  onEnded?: () => void;
 }) {
   const { select } = usePlayerSync();
   const { configured, playback, command } = useSpotifyPlayback();
@@ -41,6 +48,29 @@ export default function SpotifyConnectPlayer({
     const movementId = movementForTrack(recording.movementStarts, trackId);
     if (movementId) select(movementId, "recording");
   }, [trackId, recording.movementStarts, select]);
+
+  // Playing through: start the recording once, as soon as Spotify answers.
+  const started = useRef(false);
+  useEffect(() => {
+    if (!autoplay || !connected || started.current) return;
+    started.current = true;
+    command("/api/spotify/play", { recordingId: recording.id }).then(setError);
+  }, [autoplay, connected, command, recording.id]);
+
+  // …and move on once Spotify has played one of its tracks and left them
+  // (the album went on). Unknown for a whole album without movement tracks.
+  const reachedOurs = useRef(false);
+  const ended = useEffectEvent(() => onEnded?.());
+  useEffect(() => {
+    const ours = recordingTrackIds(recording);
+    if (!trackId || !ours) return;
+    if (ours.has(trackId)) {
+      reachedOurs.current = true;
+    } else if (reachedOurs.current) {
+      reachedOurs.current = false;
+      ended();
+    }
+  }, [trackId, recording]);
 
   const run = async (path: string, body?: object) =>
     setError(await command(path, body));

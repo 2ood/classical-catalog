@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import AddRecordingForm from "./AddRecordingForm";
 import RecordingList from "./RecordingList";
+import QueueBar, { type Queue } from "./QueueBar";
 import RecordingPlayer from "./RecordingPlayer";
 import SuggestedRecordings from "./SuggestedRecordings";
 import type { Recording } from "@/lib/schema";
@@ -13,6 +14,8 @@ export default function RecordingsPane({
   recordings,
   query,
   workTitle,
+  performers,
+  queue = null,
 }: {
   workId: string;
   recordings: Recording[];
@@ -20,9 +23,15 @@ export default function RecordingsPane({
   workTitle: string;
   /** Search words for the work, for suggestions. */
   query: string;
+  /** Each recording's performers, linked from the list. */
+  performers?: Record<string, { name: string; slug: string }[]>;
+  /** Playing through a performer: their recording here plays, then the next work. */
+  queue?: Queue | null;
 }) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState(recordings[0]?.id);
+  const [selectedId, setSelectedId] = useState(
+    queue?.recordingId ?? recordings[0]?.id,
+  );
   const [adding, setAdding] = useState(false);
   // A suggested album the add form starts from.
   const [addUrl, setAddUrl] = useState("");
@@ -53,6 +62,7 @@ export default function RecordingsPane({
 
   return (
     <section className="h-full min-h-0 flex flex-col gap-3 p-4">
+      {queue && <QueueBar queue={queue} />}
       <div className="flex items-center gap-2">
         <h2 className="text-xs uppercase text-muted mr-auto">Recordings</h2>
         <button
@@ -74,6 +84,7 @@ export default function RecordingsPane({
             recordings={recordings}
             selectedId={selected?.id}
             workTitle={workTitle}
+            performers={performers}
             onSelect={(id) => {
               setSelectedId(id);
               setEditingId(null);
@@ -107,7 +118,14 @@ export default function RecordingsPane({
         />
       )}
       {selected ? (
-        <RecordingPlayer key={`player-${selected.id}`} recording={selected} />
+        <RecordingPlayer
+          key={`player-${selected.id}`}
+          recording={selected}
+          {...(queue?.recordingId === selected.id && {
+            autoplay: true,
+            onEnded: () => queue.next && router.push(queue.next),
+          })}
+        />
       ) : (
         !adding && (
           <SuggestedRecordings

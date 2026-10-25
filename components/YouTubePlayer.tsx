@@ -24,10 +24,13 @@ type YTNamespace = {
       width: string;
       height: string;
       playerVars?: Record<string, number>;
-      events?: { onReady?: () => void };
+      events?: {
+        onReady?: () => void;
+        onStateChange?: (event: { data: number }) => void;
+      };
     },
   ) => YTPlayer;
-  PlayerState: { PLAYING: number };
+  PlayerState: { PLAYING: number; ENDED: number };
 };
 
 declare global {
@@ -66,9 +69,15 @@ export type YouTubeHandle = {
 export default function YouTubePlayer({
   videoId,
   onTime,
+  autoplay = false,
+  onEnded,
   ref,
 }: {
   videoId: string;
+  /** Starts playing once loaded. */
+  autoplay?: boolean;
+  /** The video reached its end. */
+  onEnded?: () => void;
   /** Called about once a second while the video plays. */
   onTime?: (seconds: number) => void;
   ref?: Ref<YouTubeHandle>;
@@ -78,6 +87,8 @@ export default function YouTubePlayer({
   // A seek before the player is ready (e.g. opened at a movement).
   const pendingStart = useRef<number | null>(null);
   const tick = useEffectEvent((seconds: number) => onTime?.(seconds));
+  const ended = useEffectEvent(() => onEnded?.());
+  const autoplayOnLoad = useEffectEvent(() => autoplay);
 
   useImperativeHandle(
     ref,
@@ -113,8 +124,12 @@ export default function YouTubePlayer({
         playerVars: {
           rel: 0,
           ...(start !== null && { start: Math.floor(start) }),
+          ...(autoplayOnLoad() && { autoplay: 1 }),
         },
         events: {
+          onStateChange: (event) => {
+            if (event.data === YT.PlayerState.ENDED) ended();
+          },
           onReady: () => {
             playerRef.current = player;
             // Asked for after the player was created but before it was ready.

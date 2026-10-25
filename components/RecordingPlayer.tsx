@@ -22,8 +22,14 @@ import type { Recording } from "@/lib/schema";
  */
 export default function RecordingPlayer({
   recording,
+  autoplay = false,
+  onEnded,
 }: {
   recording: Recording;
+  /** Start playing on arrival (playing through a performer). */
+  autoplay?: boolean;
+  /** The recording reached its end. */
+  onEnded?: () => void;
 }) {
   const { movements, select } = usePlayerSync();
   const youtube = useRef<YouTubeHandle>(null);
@@ -87,9 +93,19 @@ export default function RecordingPlayer({
       )}
       <div className="flex-1 min-h-0">
         {recording.mediaType === "spotify" ? (
-          <SpotifyConnectPlayer recording={recording} />
+          <SpotifyConnectPlayer
+            recording={recording}
+            autoplay={autoplay}
+            onEnded={onEnded}
+          />
         ) : videoId ? (
-          <YouTubePlayer ref={youtube} videoId={videoId} onTime={handleTime} />
+          <YouTubePlayer
+            ref={youtube}
+            videoId={videoId}
+            onTime={handleTime}
+            autoplay={autoplay}
+            onEnded={onEnded}
+          />
         ) : (
           <p className="text-muted">
             Can&apos;t embed this link: {recording.mediaUrl}

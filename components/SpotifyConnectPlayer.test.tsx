@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PlayerSync, { usePlayerSync } from "./PlayerSync";
 import SpotifyConnectPlayer from "./SpotifyConnectPlayer";
-import SpotifyPlaybackProvider from "./SpotifyPlayback";
+import SpotifyPlaybackProvider, { useSpotifyPlayback } from "./SpotifyPlayback";
 import type { Recording } from "@/lib/schema";
 
 vi.mock("next/navigation", () => ({
@@ -40,12 +40,26 @@ function ScoreSide() {
   );
 }
 
-function renderPlayer(initialMovement?: string) {
+/** Asks for playback again, so a test can step through Spotify's answers. */
+function Refresh() {
+  const { refresh } = useSpotifyPlayback();
+  return (
+    <button type="button" onClick={() => refresh()}>
+      poll
+    </button>
+  );
+}
+
+function renderPlayer(
+  initialMovement?: string,
+  queued?: { autoplay: boolean; onEnded: () => void },
+) {
   render(
     <SpotifyPlaybackProvider>
       <PlayerSync movements={movements} initialMovement={initialMovement}>
         <ScoreSide />
-        <SpotifyConnectPlayer recording={recording} />
+        <Refresh />
+        <SpotifyConnectPlayer recording={recording} {...queued} />
       </PlayerSync>
     </SpotifyPlaybackProvider>,
   );
@@ -176,5 +190,59 @@ describe("SpotifyConnectPlayer", () => {
         { recordingId: recording.id, movementId: "m2" },
       ]),
     );
+  });
+
+  describe("playing through a performer", () => {
+    it("starts the recording on arrival, once", async () => {
+      serve({
+        "/api/spotify/status": { configured: true, connected: true },
+        "/api/spotify/playback": { connected: true, state: null },
+      });
+      renderPlayer(undefined, { autoplay: true, onEnded: vi.fn() });
+      await waitFor(() =>
+        expect(posts("/api/spotify/play")).toEqual([
+          { recordingId: recording.id },
+        ]),
+      );
+      fireEvent.click(screen.getByText("poll"));
+      await new Promise((r) => setTimeout(r, 50));
+      expect(posts("/api/spotify/play")).toHaveLength(1);
+    });
+
+    it("moves on once Spotify leaves the recording's tracks", async () => {
+      const answers = [
+        playing(
+          "https://open.spotify.com/track/7pLC3L3hscXCEA5iCKY4EN",
+          "Something earlier",
+        ),
+        playing(TRACK_I, "I. Allegro con brio"),
+        playing(TRACK_II, "II. Andante con moto"),
+        playing(
+          "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC",
+          "The album goes on",
+        ),
+      ];
+      let polled = 0;
+      vi.mocked(fetch).mockImplementation(async (input) => {
+        const url = String(input);
+        if (url === "/api/spotify/status") {
+          return Response.json({ configured: true, connected: true });
+        }
+        if (url === "/api/spotify/playback") {
+          return Response.json(answers[Math.min(polled++, answers.length - 1)]);
+        }
+        return new Response(null, { status: 204 });
+      });
+      const onEnded = vi.fn();
+      renderPlayer(undefined, { autoplay: true, onEnded });
+      // Something else playing before ours starts doesn't count.
+      await waitFor(() => expect(polled).toBeGreaterThan(0));
+      expect(onEnded).not.toHaveBeenCalled();
+      for (let i = 0; i < 3; i++) {
+        fireEvent.click(screen.getByText("poll"));
+        await waitFor(() => expect(polled).toBeGreaterThan(i + 1));
+      }
+      await waitFor(() => expect(onEnded).toHaveBeenCalledTimes(1));
+    });
   });
 });
