@@ -68,6 +68,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - A "With recordings" toggle on the works list, alongside search and the genre chips
 - Likes (★) for a recording's movements — or its piece, for a work without movements — on the track rows; `/liked` lists them by composer with the performer at the right, each opening the player at that movement with that recording; "Liked" in the header; `PUT /api/likes`
 - Score PDFs are filed as `storage/scores/<composer>/<work>/<label>.pdf` (file names capped at 40 characters, numbered when taken); `npm run db:scores` moves scores stored under the old generated names, which keep working until then
+- YouTube keeps playing when you leave the work page: one player for the whole app sits over the work page's video area and, elsewhere, floats bottom-right above the Spotify mini player with the work's name (linking back) and ✕; play-through loads each next video into it. Opening another work while a video plays leaves it playing and offers "▶ Play this recording here" (a track's ▶ or picking a recording in the list also takes over); coming back to the playing work shows its recording
+- The floating video and the Spotify mini player minimize (▾) to a one-line bar and expand again (▴); the minimized video keeps playing
 
 ### Changed
 - Movements now belong to the work: names and order are shared by all its scores and recordings, which each store their own start pages, times or tracks; existing per-score movements were migrated to their works
@@ -81,6 +83,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Readable addresses: `/composer/brahms`, `/composer/brahms/klavierstucke-op-118` and `/composer/brahms/klavierstucke-op-118/ii-intermezzo-in-a-dur-andante-teneramente` replace `/composer/<id>` and `/work/<id>`; a composer or work keeps its address when renamed
 - In the works list, a movement shows as recorded only when some recording has a start time or track for it
 - The composer page, the Library and the composer cloud are centred in the window
+- The Spotify mini player is stacked bottom-right under the floating YouTube video; the works list's movement toggle (▸ ▾) is larger
 
 ### Removed
 - The performer tiles (initials) and the recordings pane's Spotify panel with "Play this recording from the start" (replaced by the track list and the mini player)

@@ -14,14 +14,20 @@ _Nothing in progress._
 - [ ] `/admin/composer/[id]` — edit composer, add/remove works; bring back the composer page "Edit" link
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
 
-### Milestone 18: A YouTube player that survives navigation
-YouTube stops when you leave the work page, because its video lives in that page; Spotify doesn't, because it plays in the Spotify app (owner's question, 2026-10-25).
-- [ ] One YouTube player in the root layout (it persists across navigation; the App Router never unmounts the layout, so no change to a single-page app is needed). An iframe reloads when moved in the DOM, so it stays put and is positioned over the work page's video area there, and shrinks to a floating video beside the mini player elsewhere
-- [ ] The work page's ▶ track buttons, the score following along and the movement control talk to that one player
-- [ ] Play-through loads the next video into the same player (no new player per work, so no autoplay blocking)
-- [ ] Manual verification checklist
-
 ## Completed
+
+### Milestone 18: A YouTube player that survives navigation (completed 2026-10-25)
+YouTube stops when you leave the work page, because its video lives in that page; Spotify doesn't, because it plays in the Spotify app (owner's question, 2026-10-25).
+- [x] One YouTube player in the root layout (`YouTubeDock`; it persists across navigation, since the App Router never unmounts the layout, so no change to a single-page app is needed). An iframe reloads when moved in the DOM, so it stays put: positioned over the work page's video area there, floating bottom-right elsewhere, stacked above the Spotify mini player (with the work's name, linking back, and ✕) — test-first
+- [x] Both floating boxes minimize (▾) and expand (▴): the video shrinks to its title bar and plays on, the mini player to the track's name (asked during this milestone) — test-first
+- [x] The work page's ▶ track buttons, the score following along and the movement control talk to that one player
+- [x] Play-through loads the next video into the same player (no new player per work, so no autoplay blocking)
+- [x] Manual verification checklist — passed
+- Decisions:
+  - Arriving at a work while another work's video plays doesn't stop it: the work's player area offers "▶ Play this recording here", and a track's ▶ also takes over; picking a recording in the list always does (`shouldLoad`)
+  - Back at the work whose video is playing, its recording is the one shown
+  - A video only cued (never started) hides when you leave its page instead of floating
+  - Minimizing shrinks the video to nothing rather than removing it, so it plays on; the minimized video and mini player look alike, and the ▾ ▴ toggles (and the works list's ▸ ▾) are a size larger (owner's notes)
 
 ### Milestone 17: Library touches (completed 2026-10-25)
 Small things for living with a full library (owner's notes 2026-10-25, items 1, 6, 7).

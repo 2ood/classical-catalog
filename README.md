@@ -18,7 +18,7 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 - Player page — PDF score viewer (upload, or search IMSLP) beside a YouTube/Spotify embed
 - Recordings as a track list — each movement (or the piece) with its own play button, the one playing in Spotify green; edit or delete a recording; a movement control beside the work's title moves score and recording together
 - Performers — recordings linked to performers (orchestras, choirs, people by instrument), with pages, renaming and merging; "Play all" plays a performer's recordings one after another
-- A floating mini player on every page while Spotify plays (previous / next, repeat, like, "Go to current track")
+- A floating mini player on every page while Spotify plays (previous / next, repeat, like, "Go to current track"); YouTube keeps playing across pages too, floating above it; both minimize to a one-line bar
 - Movements: jump through the score by movement; a YouTube recording seeks to the chosen movement and turns the score as it plays; a Spotify recording loads each movement's track — or, with Spotify Connect, plays it in your Spotify app and turns the score as tracks change
 - PDF scores stored on local disk by composer and work (`storage/scores/<composer>/<work>/<label>.pdf`), served by the app
 - Admin pages for managing composers, works, recordings and scores (planned)
