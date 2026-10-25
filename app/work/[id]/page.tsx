@@ -3,10 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import RecordingsPane from "@/components/RecordingsPane";
+import ScorePane from "@/components/ScorePane";
 import { isLoggedIn } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { UUID } from "@/lib/recordings";
-import { composers, recordings, works } from "@/lib/schema";
+import { composers, recordings, scores, works } from "@/lib/schema";
+import { imslpSearchUrl } from "@/lib/scores";
 
 export default function WorkPage({ params }: PageProps<"/work/[id]">) {
   return (
@@ -36,6 +38,11 @@ async function Player({ params }: Pick<PageProps<"/work/[id]">, "params">) {
     .from(recordings)
     .where(eq(recordings.workId, id))
     .orderBy(asc(recordings.createdAt));
+  const scoreRows = await db
+    .select({ id: scores.id, label: scores.label, blobUrl: scores.blobUrl })
+    .from(scores)
+    .where(eq(scores.workId, id))
+    .orderBy(asc(scores.uploadedAt));
   const canEdit = await isLoggedIn();
 
   return (
@@ -55,12 +62,12 @@ async function Player({ params }: Pick<PageProps<"/work/[id]">, "params">) {
         <span className="text-xs text-muted">{composer.name}</span>
       </div>
       <div className="flex-1 min-h-0 grid grid-cols-2 divide-x divide-border">
-        <section className="flex flex-col min-h-0 p-4">
-          <h2 className="text-xs uppercase text-muted">Score</h2>
-          <p className="flex-1 flex items-center justify-center text-muted">
-            No score yet.
-          </p>
-        </section>
+        <ScorePane
+          workId={work.id}
+          scores={scoreRows}
+          canEdit={canEdit}
+          imslpUrl={imslpSearchUrl({ ...work, composer: composer.name })}
+        />
         <RecordingsPane workId={work.id} recordings={recs} canEdit={canEdit} />
       </div>
     </>

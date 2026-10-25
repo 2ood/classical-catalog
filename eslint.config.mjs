@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // PDF.js assets copied on postinstall.
+    "public/pdfjs/**",
   ]),
 ]);
 

@@ -11,16 +11,19 @@
     "format": "prettier --write .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "postinstall": "node scripts/copy-pdfjs-assets.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
+    "@vercel/blob": "^2.8.2",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.4",
     "iron-session": "^9.0.1",
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "react-pdf": "^11.0.0",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
