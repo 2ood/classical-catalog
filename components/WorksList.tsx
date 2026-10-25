@@ -107,7 +107,7 @@ export default function WorksList({
                         aria-expanded={open}
                         aria-label={`Movements of ${w.title}`}
                         onClick={() => toggle(w.id)}
-                        className="w-4 shrink-0 text-xs text-muted hover:text-text"
+                        className="w-4 shrink-0 text-base leading-none text-muted hover:text-text"
                       >
                         {open ? "▾" : "▸"}
                       </button>
