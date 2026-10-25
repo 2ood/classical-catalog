@@ -1,8 +1,12 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { UUID } from "@/lib/recordings";
-import { recordings } from "@/lib/schema";
+import { parseMovementStarts } from "@/lib/movements";
+import { parseRecordingInput, UUID } from "@/lib/recordings";
+import { recordings, works } from "@/lib/schema";
+
+// parseRecordingInput checks a work id too; an edit keeps the recording's.
+const ID_PLACEHOLDER = "00000000-0000-4000-8000-000000000000";
 
 export async function DELETE(
   _request: Request,
@@ -24,4 +28,63 @@ export async function DELETE(
     return NextResponse.json({ error: "Recording not found" }, { status: 404 });
   }
   return new NextResponse(null, { status: 204 });
+}
+
+/**
+ * Edits a recording: performer, year, link, and (optional) movement starts.
+ * Without movement starts the old ones stay — unless the media type changed,
+ * since tracks and times don't carry over.
+ */
+export async function PATCH(
+  request: Request,
+  { params }: RouteContext<"/api/recordings/[id]">,
+) {
+  const { id } = await params;
+  if (!UUID.test(id)) {
+    return NextResponse.json(
+      { error: "Invalid recording id" },
+      { status: 400 },
+    );
+  }
+  const body = await request.json().catch(() => null);
+  const parsed = parseRecordingInput({ ...body, workId: ID_PLACEHOLDER });
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 });
+  }
+
+  const [existing] = await db
+    .select({
+      mediaType: recordings.mediaType,
+      movementStarts: recordings.movementStarts,
+      movements: works.movements,
+    })
+    .from(recordings)
+    .innerJoin(works, eq(recordings.workId, works.id))
+    .where(eq(recordings.id, id));
+  if (!existing) {
+    return NextResponse.json({ error: "Recording not found" }, { status: 404 });
+  }
+
+  const { mediaType } = parsed.value;
+  let movementStarts =
+    mediaType === existing.mediaType ? existing.movementStarts : {};
+  if (body.movementStarts !== undefined) {
+    const starts = parseMovementStarts(
+      body.movementStarts,
+      mediaType,
+      existing.movements.map((m) => m.id),
+    );
+    if (!starts.ok) {
+      return NextResponse.json({ error: starts.error }, { status: 400 });
+    }
+    movementStarts = starts.value;
+  }
+
+  const { performer, year, mediaUrl } = parsed.value;
+  const [updated] = await db
+    .update(recordings)
+    .set({ performer, year, mediaType, mediaUrl, movementStarts })
+    .where(eq(recordings.id, id))
+    .returning();
+  return NextResponse.json(updated);
 }

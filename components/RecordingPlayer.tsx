@@ -36,6 +36,9 @@ export default function RecordingPlayer({
     if (recording.mediaType === "youtube" && typeof start === "number") {
       lastMovement.current = movementId;
       youtube.current?.seekTo(start);
+      // A track's ▶ (or a movement chosen in the score) plays it; when
+      // opened at a movement the video isn't ready yet and stays cued.
+      youtube.current?.play();
     }
   });
 
@@ -61,11 +64,7 @@ export default function RecordingPlayer({
 
   return (
     <>
-      <div className="flex items-center gap-3 text-sm text-muted">
-        <p className="flex-1">
-          {recording.performer}
-          {recording.year && ` · ${recording.year}`}
-        </p>
+      <div className="flex items-center justify-end gap-3 text-sm text-muted">
         {!editing && (
           <button
             type="button"

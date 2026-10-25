@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePlayerSync } from "./PlayerSync";
 import { extractSpotifyId, extractYouTubeId } from "@/lib/media";
 import { movementLabel } from "@/lib/movements";
+import type { Recording } from "@/lib/schema";
 import type { RecordingPreview } from "@/lib/suggestions";
 
 const input =
@@ -31,27 +32,45 @@ function spotifyLink(url: string) {
 export default function AddRecordingForm({
   workId,
   initialUrl = "",
+  recording,
   onAdded,
+  onCancel,
 }: {
   workId: string;
   /** e.g. a suggested album. */
   initialUrl?: string;
+  /** Edits this recording instead of adding one. */
+  recording?: Recording;
+  /** After saving. */
   onAdded?: () => void;
+  /** Closes the form without saving (Cancel, or Escape). */
+  onCancel?: () => void;
 }) {
+  const startUrl = recording?.mediaUrl ?? initialUrl;
+  // Saved Spotify tracks per movement (YouTube times are kept as they are).
+  const savedTracks = Object.fromEntries(
+    Object.entries(recording?.movementStarts ?? {}).filter(
+      (e): e is [string, string] => typeof e[1] === "string",
+    ),
+  );
   const router = useRouter();
   const pathname = usePathname();
   const { movements } = usePlayerSync();
-  const [performer, setPerformer] = useState("");
-  const [year, setYear] = useState("");
-  const [mediaType, setMediaType] = useState<"youtube" | "spotify">(
-    spotifyLink(initialUrl) ? "spotify" : "youtube",
+  const [performer, setPerformer] = useState(recording?.performer ?? "");
+  const [year, setYear] = useState(
+    recording?.year ? String(recording.year) : "",
   );
-  const [url, setUrl] = useState(initialUrl);
+  const [mediaType, setMediaType] = useState<"youtube" | "spotify">(
+    recording?.mediaType ?? (spotifyLink(initialUrl) ? "spotify" : "youtube"),
+  );
+  const [url, setUrl] = useState(startUrl);
   // Spotify's answer, for the link it was asked about.
   const [answer, setAnswer] = useState<(Answer & { link: string }) | null>(
     null,
   );
-  const [starts, setStarts] = useState<Record<string, string>>({});
+  const [starts, setStarts] = useState<Record<string, string>>(savedTracks);
+  // A single piece (no movements): the album's track that is the work.
+  const [pieceLink, setPieceLink] = useState(recording ? startUrl : "");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -77,7 +96,13 @@ export default function AddRecordingForm({
           answer({ status: "ready", data: body });
           setPerformer((p) => p || body.performer);
           setYear((y) => y || (body.year ? String(body.year) : ""));
-          setStarts(body.movementStarts);
+          if (recording && link === startUrl) {
+            // Editing, link unchanged: saved choices win; gaps get matches.
+            setStarts((s) => ({ ...body.movementStarts, ...s }));
+          } else {
+            setStarts(body.movementStarts);
+            setPieceLink(body.mediaUrl);
+          }
         } else if (body?.code === "not-connected") {
           answer({ status: "not-connected" });
         } else {
@@ -88,7 +113,7 @@ export default function AddRecordingForm({
     return () => {
       stale = true;
     };
-  }, [link, workId]);
+  }, [link, workId, recording, startUrl]);
 
   function handleUrl(next: string) {
     setUrl(next);
@@ -101,23 +126,38 @@ export default function AddRecordingForm({
     setPending(true);
     setError(null);
     const ready = preview.status === "ready" ? preview.data : null;
-    const res = await fetch("/api/recordings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        workId,
-        performer,
-        year,
-        mediaType,
-        mediaUrl: ready?.mediaUrl ?? url,
-        movementStarts: ready
-          ? Object.fromEntries(Object.entries(starts).filter(([, t]) => t))
-          : {},
-      }),
-    });
+    const tracks = Object.fromEntries(
+      Object.entries(starts).filter(([, t]) => t),
+    );
+    // Editing keeps what it can't show (YouTube times, or tracks while
+    // Spotify isn't reachable); adding starts from what was matched.
+    const movementStarts = recording
+      ? mediaType === "spotify" && ready
+        ? { movementStarts: tracks }
+        : {}
+      : { movementStarts: ready ? tracks : {} };
+    const res = await fetch(
+      recording ? `/api/recordings/${recording.id}` : "/api/recordings",
+      {
+        method: recording ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(recording ? {} : { workId }),
+          performer,
+          year,
+          mediaType,
+          mediaUrl: ready
+            ? movements.length === 0
+              ? pieceLink || ready.mediaUrl
+              : ready.mediaUrl
+            : url,
+          ...movementStarts,
+        }),
+      },
+    );
     setPending(false);
     if (!res.ok) {
-      setError((await res.json().catch(() => null))?.error ?? "Failed to add");
+      setError((await res.json().catch(() => null))?.error ?? "Failed to save");
       return;
     }
     onAdded?.();
@@ -127,7 +167,13 @@ export default function AddRecordingForm({
   const tracks = preview.status === "ready" ? preview.data.tracks : [];
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2 text-sm">
+    <form
+      onSubmit={handleSubmit}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && onCancel) onCancel();
+      }}
+      className="flex flex-col gap-2 text-sm"
+    >
       <div className="flex flex-wrap gap-2 items-center">
         <input
           placeholder="Performer"
@@ -166,8 +212,17 @@ export default function AddRecordingForm({
           disabled={pending || preview.status === "loading"}
           className="px-3 py-1 bg-inverse-bg text-inverse-text hover:bg-[#333] disabled:opacity-40"
         >
-          + Add
+          {recording ? "Save" : "+ Add"}
         </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-3 py-1 text-muted hover:text-text"
+          >
+            Cancel
+          </button>
+        )}
       </div>
       {preview.status === "loading" && (
         <p className="text-muted">Reading the album from Spotify…</p>
@@ -185,6 +240,28 @@ export default function AddRecordingForm({
       )}
       {preview.status === "failed" && (
         <p className="text-muted">{preview.error}</p>
+      )}
+      {movements.length === 0 && tracks.length > 0 && (
+        <label className="flex items-center gap-2">
+          <span className="text-muted">Track</span>
+          <select
+            aria-label="Track"
+            value={pieceLink}
+            onChange={(e) => setPieceLink(e.target.value)}
+            className={`${input} flex-1 min-w-0`}
+          >
+            <option
+              value={preview.status === "ready" ? preview.data.albumUrl : ""}
+            >
+              Whole album
+            </option>
+            {tracks.map((t) => (
+              <option key={t.url} value={t.url}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
       {movements.length > 0 && tracks.length > 0 && (
         <div className="flex flex-col gap-1">

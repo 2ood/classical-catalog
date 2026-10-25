@@ -11,6 +11,7 @@ import {
 // The small part of the YouTube IFrame API this app uses.
 type YTPlayer = {
   seekTo(seconds: number, allowSeekAhead: boolean): void;
+  playVideo(): void;
   getCurrentTime(): number;
   getPlayerState(): number;
   destroy(): void;
@@ -55,6 +56,8 @@ function loadYouTubeApi(): Promise<YTNamespace> {
 
 export type YouTubeHandle = {
   seekTo: (seconds: number) => void;
+  /** Plays, once the player is ready. */
+  play: () => void;
   /** Playback position in seconds, or null before the player is ready. */
   currentTime: () => number | null;
 };
@@ -83,6 +86,7 @@ export default function YouTubePlayer({
         if (playerRef.current) playerRef.current.seekTo(seconds, true);
         else pendingStart.current = seconds;
       },
+      play: () => playerRef.current?.playVideo(),
       currentTime: () => playerRef.current?.getCurrentTime() ?? null,
     }),
     [],

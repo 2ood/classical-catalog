@@ -92,6 +92,7 @@ async function Player({ params }: Pick<PageProps<Route>, "params">) {
         <RecordingsPane
           workId={work.id}
           recordings={recs}
+          workTitle={work.title}
           query={searchQuery(composer, work)}
         />
       </div>

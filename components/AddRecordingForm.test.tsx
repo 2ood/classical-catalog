@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AddRecordingForm from "./AddRecordingForm";
 import PlayerSync from "./PlayerSync";
+import type { Recording } from "@/lib/schema";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -22,6 +23,7 @@ const preview = {
   performer: "Arcadi Volodos",
   year: 2017,
   mediaUrl: ALBUM,
+  albumUrl: ALBUM,
   tracks: [
     { url: T(1), name: "Op. 118: No. 1, Intermezzo in A Minor" },
     { url: T(2), name: "Op. 118: No. 2, Intermezzo in A Major" },
@@ -30,9 +32,9 @@ const preview = {
   movementStarts: { m1: T(1), m2: T(2) },
 };
 
-function renderForm(initialUrl?: string) {
+function renderForm(initialUrl?: string, workMovements = movements) {
   render(
-    <PlayerSync movements={movements}>
+    <PlayerSync movements={workMovements}>
       <AddRecordingForm workId={WORK_ID} initialUrl={initialUrl} />
     </PlayerSync>,
   );
@@ -171,5 +173,114 @@ describe("AddRecordingForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "+ Add" }));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(posted()).toMatchObject({ mediaUrl: ALBUM, movementStarts: {} });
+  });
+
+  it("saves a single piece as its own track, changeable", async () => {
+    serve(Response.json({ ...preview, mediaUrl: T(2), movementStarts: {} }));
+    renderForm(undefined, []);
+    fireEvent.change(screen.getByPlaceholderText("URL"), {
+      target: { value: ALBUM },
+    });
+    const track = await screen.findByRole("combobox", { name: "Track" });
+    expect(track).toHaveValue(T(2));
+    expect(screen.queryByRole("combobox", { name: /Track for/ })).toBeNull();
+
+    fireEvent.change(track, { target: { value: T(3) } });
+    fireEvent.click(screen.getByRole("button", { name: "+ Add" }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(posted()).toMatchObject({ mediaUrl: T(3), movementStarts: {} });
+  });
+
+  it("can keep the whole album for a single piece", async () => {
+    serve(Response.json({ ...preview, mediaUrl: ALBUM, movementStarts: {} }));
+    renderForm(undefined, []);
+    fireEvent.change(screen.getByPlaceholderText("URL"), {
+      target: { value: ALBUM },
+    });
+    expect(await screen.findByRole("combobox", { name: "Track" })).toHaveValue(
+      ALBUM,
+    );
+  });
+
+  describe("editing a recording", () => {
+    const existing = {
+      id: "r1",
+      performer: "Seongjin Cho",
+      year: 2016,
+      mediaType: "spotify",
+      mediaUrl: ALBUM,
+      movementStarts: { m1: T(3) },
+    } as unknown as Recording;
+
+    function renderEdit(recording = existing) {
+      render(
+        <PlayerSync movements={movements}>
+          <AddRecordingForm workId={WORK_ID} recording={recording} />
+        </PlayerSync>,
+      );
+    }
+
+    const patched = () => {
+      const call = vi
+        .mocked(fetch)
+        .mock.calls.find(([, init]) => init?.method === "PATCH");
+      return { url: call?.[0], body: JSON.parse(call?.[1]?.body as string) };
+    };
+
+    it("starts from the recording, keeping its own movement tracks", async () => {
+      serve(Response.json(preview));
+      renderEdit();
+      expect(screen.getByPlaceholderText("Performer")).toHaveValue(
+        "Seongjin Cho",
+      );
+      expect(screen.getByPlaceholderText("URL")).toHaveValue(ALBUM);
+      // The saved choice for I wins over the preview's match; II is matched.
+      expect(
+        await screen.findByRole("combobox", {
+          name: "Track for I. Intermezzo in a-Moll",
+        }),
+      ).toHaveValue(T(3));
+      expect(
+        screen.getByRole("combobox", {
+          name: "Track for II. Intermezzo in A-Dur",
+        }),
+      ).toHaveValue(T(2));
+    });
+
+    it("saves changes to the recording", async () => {
+      serve(Response.json(preview));
+      renderEdit();
+      await screen.findByRole("combobox", {
+        name: "Track for I. Intermezzo in a-Moll",
+      });
+      fireEvent.change(screen.getByPlaceholderText("Performer"), {
+        target: { value: "Seong-Jin Cho" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(refresh).toHaveBeenCalled());
+      expect(patched()).toEqual({
+        url: "/api/recordings/r1",
+        body: {
+          performer: "Seong-Jin Cho",
+          year: "2016",
+          mediaType: "spotify",
+          mediaUrl: ALBUM,
+          movementStarts: { m1: T(3), m2: T(2) },
+        },
+      });
+    });
+
+    it("leaves YouTube times alone", async () => {
+      serve(Response.json(preview));
+      renderEdit({
+        ...existing,
+        mediaType: "youtube",
+        mediaUrl: "https://youtu.be/dQw4w9WgXcQ",
+        movementStarts: { m1: 0, m2: 312 },
+      } as unknown as Recording);
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(refresh).toHaveBeenCalled());
+      expect(patched().body).not.toHaveProperty("movementStarts");
+    });
   });
 });
