@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import AddRecordingForm from "./AddRecordingForm";
-import MediaEmbed from "./MediaEmbed";
 import PerformerTiles from "./PerformerTiles";
+import RecordingPlayer from "./RecordingPlayer";
 import type { Recording } from "@/lib/schema";
 
 export default function RecordingsPane({
@@ -48,27 +48,15 @@ export default function RecordingsPane({
         onDelete={handleDelete}
         onAdd={() => setAdding((a) => !a)}
       />
-      {selected && (
-        <p className="text-sm text-muted">
-          {selected.performer}
-          {selected.year && ` · ${selected.year}`}
-        </p>
-      )}
       {error && <p className="text-sm text-muted">{error}</p>}
       {adding && (
         <AddRecordingForm workId={workId} onAdded={() => setAdding(false)} />
       )}
-      <div className="flex-1 min-h-0">
-        {selected ? (
-          <MediaEmbed
-            mediaType={selected.mediaType}
-            mediaUrl={selected.mediaUrl}
-            title={selected.performer}
-          />
-        ) : (
-          <p className="text-muted">No recordings yet.</p>
-        )}
-      </div>
+      {selected ? (
+        <RecordingPlayer key={selected.id} recording={selected} />
+      ) : (
+        <p className="text-muted">No recordings yet.</p>
+      )}
     </section>
   );
 }

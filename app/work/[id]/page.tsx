@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import PlayerSync from "@/components/PlayerSync";
 import RecordingsPane from "@/components/RecordingsPane";
 import ScorePane from "@/components/ScorePane";
 import { db } from "@/lib/db";
@@ -41,7 +42,7 @@ async function Player({ params }: Pick<PageProps<"/work/[id]">, "params">) {
     .select({
       id: scores.id,
       label: scores.label,
-      movements: scores.movements,
+      movementPages: scores.movementPages,
     })
     .from(scores)
     .where(eq(scores.workId, id))
@@ -64,12 +65,14 @@ async function Player({ params }: Pick<PageProps<"/work/[id]">, "params">) {
         <span className="text-xs text-muted">{composer.name}</span>
       </div>
       <div className="flex-1 min-h-0 grid grid-cols-2 divide-x divide-border">
-        <ScorePane
-          workId={work.id}
-          scores={scoreRows}
-          imslpUrl={imslpSearchUrl({ ...work, composer: composer.name })}
-        />
-        <RecordingsPane workId={work.id} recordings={recs} />
+        <PlayerSync movements={work.movements}>
+          <ScorePane
+            workId={work.id}
+            scores={scoreRows}
+            imslpUrl={imslpSearchUrl({ ...work, composer: composer.name })}
+          />
+          <RecordingsPane workId={work.id} recordings={recs} />
+        </PlayerSync>
       </div>
     </>
   );
