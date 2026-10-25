@@ -112,6 +112,10 @@ describe("layoutCloud", () => {
     expect(layoutCloud(words(0).slice(0, 5)).height).toBe(MIN_CLOUD_HEIGHT);
   });
 
+  it("takes a smaller minimum height for small clusters", () => {
+    expect(layoutCloud(words(0).slice(0, 2), 120).height).toBe(120);
+  });
+
   it("grows taller for a large catalogue", () => {
     const many = [...words(0), ...words(100), ...words(200)];
     expect(layoutCloud(many).height).toBeGreaterThan(MIN_CLOUD_HEIGHT);

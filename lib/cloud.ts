@@ -58,11 +58,15 @@ function overlap(a: PlacedWord, b: PlacedWord) {
 const clamp = (v: number, max: number) => Math.min(Math.max(v, 0), max);
 
 /**
- * Sizes the cloud so word boxes cover at most MAX_DENSITY of it, then places
+ * Sizes the cloud (at least `minHeight` tall) so word boxes cover at most
+ * MAX_DENSITY of it, then places
  * words largest-first at seeded random positions and nudges each one out of
  * collisions for at most MAX_ITERATIONS.
  */
-export function layoutCloud(words: CloudWord[]): {
+export function layoutCloud(
+  words: CloudWord[],
+  minHeight = MIN_CLOUD_HEIGHT,
+): {
   words: PlacedWord[];
   height: number;
 } {
@@ -74,7 +78,7 @@ export function layoutCloud(words: CloudWord[]): {
     return sum + box.width * box.height;
   }, 0);
   const cloudHeight = Math.max(
-    MIN_CLOUD_HEIGHT,
+    minHeight,
     Math.ceil(area / MAX_DENSITY / CLOUD_WIDTH),
   );
   const placed: PlacedWord[] = [];
