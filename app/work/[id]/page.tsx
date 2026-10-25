@@ -2,7 +2,6 @@ import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import AddRecordingForm from "@/components/AddRecordingForm";
 import RecordingsPane from "@/components/RecordingsPane";
 import { isLoggedIn } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -11,8 +10,9 @@ import { composers, recordings, works } from "@/lib/schema";
 
 export default function WorkPage({ params }: PageProps<"/work/[id]">) {
   return (
-    <main className="p-6 flex-1 flex flex-col">
-      <Suspense fallback={<p className="text-muted">Loading…</p>}>
+    // Full viewport minus the 3rem header in the root layout.
+    <main className="h-[calc(100dvh-3rem)] flex flex-col">
+      <Suspense fallback={<p className="p-6 text-muted">Loading…</p>}>
         <Player params={params} />
       </Suspense>
     </main>
@@ -36,27 +36,33 @@ async function Player({ params }: Pick<PageProps<"/work/[id]">, "params">) {
     .from(recordings)
     .where(eq(recordings.workId, id))
     .orderBy(asc(recordings.createdAt));
+  const canEdit = await isLoggedIn();
 
   return (
     <>
-      <Link
-        href={`/composer/${composer.id}`}
-        className="text-sm text-muted hover:text-text"
-      >
-        ← {composer.name}
-      </Link>
-      <h1 className="text-xl mt-2 mb-4">
-        <span className="text-muted">{work.catalogueNum}</span> {work.title}
-      </h1>
-      <RecordingsPane recordings={recs} />
-      <Suspense>
-        <AddRecordingSlot workId={work.id} />
-      </Suspense>
+      <div className="flex items-baseline gap-3 px-6 py-3 border-b border-border">
+        <Link
+          href={`/composer/${composer.id}`}
+          aria-label={`Back to ${composer.name}`}
+          className="text-muted hover:text-text"
+        >
+          ←
+        </Link>
+        <h1 className="text-lg">
+          <span className="text-muted">{work.catalogueNum}</span> {work.title}
+          {work.key && `, ${work.key}`}
+        </h1>
+        <span className="text-xs text-muted">{composer.name}</span>
+      </div>
+      <div className="flex-1 min-h-0 grid grid-cols-2 divide-x divide-border">
+        <section className="flex flex-col min-h-0 p-4">
+          <h2 className="text-xs uppercase text-muted">Score</h2>
+          <p className="flex-1 flex items-center justify-center text-muted">
+            No score yet.
+          </p>
+        </section>
+        <RecordingsPane workId={work.id} recordings={recs} canEdit={canEdit} />
+      </div>
     </>
   );
-}
-
-async function AddRecordingSlot({ workId }: { workId: string }) {
-  if (!(await isLoggedIn())) return null;
-  return <AddRecordingForm workId={workId} />;
 }

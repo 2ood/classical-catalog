@@ -31,7 +31,7 @@ export default function MediaEmbed({
     <iframe
       src={src}
       title={title}
-      className="w-full h-full min-h-96"
+      className="w-full h-full"
       allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
       allowFullScreen
     />

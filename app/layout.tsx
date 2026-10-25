@@ -29,7 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${imFell.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <header className="flex items-center justify-between px-6 py-3 border-b border-border text-sm">
+        <header className="h-12 shrink-0 flex items-center justify-between px-6 border-b border-border text-sm">
           <Link href="/" className="font-serif text-lg">
             Classical Catalog
           </Link>

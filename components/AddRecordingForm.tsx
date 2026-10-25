@@ -6,7 +6,13 @@ import { useState } from "react";
 const input =
   "border border-border px-2 py-1 bg-bg focus:outline-none focus:border-text";
 
-export default function AddRecordingForm({ workId }: { workId: string }) {
+export default function AddRecordingForm({
+  workId,
+  onAdded,
+}: {
+  workId: string;
+  onAdded?: () => void;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -32,13 +38,14 @@ export default function AddRecordingForm({ workId }: { workId: string }) {
       return;
     }
     form.reset();
+    onAdded?.();
     router.refresh();
   }
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-6 flex flex-wrap gap-2 items-center text-sm"
+      className="flex flex-wrap gap-2 items-center text-sm"
     >
       <input
         name="performer"
