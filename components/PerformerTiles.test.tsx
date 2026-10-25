@@ -15,7 +15,6 @@ function renderTiles(
     <PerformerTiles
       recordings={recordings}
       selectedId="a"
-      canEdit={false}
       {...handlers}
       {...props}
     />,
@@ -49,14 +48,8 @@ describe("PerformerTiles", () => {
     expect(onSelect).toHaveBeenCalledWith("b");
   });
 
-  it("hides delete and add controls when not editing", () => {
-    renderTiles();
-    expect(screen.queryByRole("button", { name: /^Delete/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Add recording" })).toBeNull();
-  });
-
-  it("offers delete per tile and an add tile when editing", () => {
-    const { onDelete, onAdd, onSelect } = renderTiles({ canEdit: true });
+  it("offers delete per tile and an add tile", () => {
+    const { onDelete, onAdd, onSelect } = renderTiles();
     fireEvent.click(
       screen.getByRole("button", { name: "Delete Karajan / BPO" }),
     );

@@ -13,14 +13,12 @@ const label = (r: TileRecording) =>
 export default function PerformerTiles({
   recordings,
   selectedId,
-  canEdit,
   onSelect,
   onDelete,
   onAdd,
 }: {
   recordings: TileRecording[];
   selectedId: string | undefined;
-  canEdit: boolean;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
@@ -39,29 +37,25 @@ export default function PerformerTiles({
           >
             {performerInitials(r.performer)}
           </button>
-          {canEdit && (
-            <button
-              type="button"
-              aria-label={`Delete ${r.performer}`}
-              onClick={() => onDelete(r.id)}
-              className="hidden group-hover:flex group-focus-within:flex absolute -top-1 -right-1 w-4 h-4 rounded-full bg-bg border border-border text-[10px] leading-none items-center justify-center text-muted hover:text-text"
-            >
-              ✕
-            </button>
-          )}
+          <button
+            type="button"
+            aria-label={`Delete ${r.performer}`}
+            onClick={() => onDelete(r.id)}
+            className="hidden group-hover:flex group-focus-within:flex absolute -top-1 -right-1 w-4 h-4 rounded-full bg-bg border border-border text-[10px] leading-none items-center justify-center text-muted hover:text-text"
+          >
+            ✕
+          </button>
         </div>
       ))}
-      {canEdit && (
-        <button
-          type="button"
-          aria-label="Add recording"
-          title="Add recording"
-          onClick={onAdd}
-          className={`${tile} ${inactive} text-base`}
-        >
-          +
-        </button>
-      )}
+      <button
+        type="button"
+        aria-label="Add recording"
+        title="Add recording"
+        onClick={onAdd}
+        className={`${tile} ${inactive} text-base`}
+      >
+        +
+      </button>
     </div>
   );
 }

@@ -1,18 +1,13 @@
 import { eq } from "drizzle-orm";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { UUID } from "@/lib/recordings";
 import { recordings } from "@/lib/schema";
-import { isSessionValid, SESSION_COOKIE } from "@/lib/session";
 
 export async function DELETE(
-  request: NextRequest,
+  _request: Request,
   { params }: RouteContext<"/api/recordings/[id]">,
 ) {
-  if (!(await isSessionValid(request.cookies.get(SESSION_COOKIE)?.value))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { id } = await params;
   if (!UUID.test(id)) {
     return NextResponse.json(

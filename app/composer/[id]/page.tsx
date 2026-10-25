@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import WorksList from "@/components/WorksList";
-import { isLoggedIn } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getWorksForComposer } from "@/lib/queries";
 import { UUID } from "@/lib/recordings";
@@ -45,9 +44,12 @@ async function Works({ params }: Pick<PageProps<"/composer/[id]">, "params">) {
         {composer.era && (
           <span className="text-xs text-muted">{composer.era}</span>
         )}
-        <Suspense>
-          <EditLink composerId={id} />
-        </Suspense>
+        <Link
+          href={`/admin/composer/${id}`}
+          className="ml-auto text-sm text-muted hover:text-text"
+        >
+          Edit
+        </Link>
       </header>
       {works.length === 0 ? (
         <p className="text-muted">No works yet.</p>
@@ -55,17 +57,5 @@ async function Works({ params }: Pick<PageProps<"/composer/[id]">, "params">) {
         <WorksList works={works} />
       )}
     </>
-  );
-}
-
-async function EditLink({ composerId }: { composerId: string }) {
-  if (!(await isLoggedIn())) return null;
-  return (
-    <Link
-      href={`/admin/composer/${composerId}`}
-      className="ml-auto text-sm text-muted hover:text-text"
-    >
-      Edit
-    </Link>
   );
 }

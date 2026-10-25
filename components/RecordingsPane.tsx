@@ -10,11 +10,9 @@ import type { Recording } from "@/lib/schema";
 export default function RecordingsPane({
   workId,
   recordings,
-  canEdit,
 }: {
   workId: string;
   recordings: Recording[];
-  canEdit: boolean;
 }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState(recordings[0]?.id);
@@ -46,7 +44,6 @@ export default function RecordingsPane({
       <PerformerTiles
         recordings={recordings}
         selectedId={selected?.id}
-        canEdit={canEdit}
         onSelect={setSelectedId}
         onDelete={handleDelete}
         onAdd={() => setAdding((a) => !a)}
@@ -58,7 +55,7 @@ export default function RecordingsPane({
         </p>
       )}
       {error && <p className="text-sm text-muted">{error}</p>}
-      {canEdit && adding && (
+      {adding && (
         <AddRecordingForm workId={workId} onAdded={() => setAdding(false)} />
       )}
       <div className="flex-1 min-h-0">
