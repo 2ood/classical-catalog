@@ -1,9 +1,11 @@
 import { loadEnvConfig } from "@next/env";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { composers, recordings, works } from "../lib/schema";
 
 loadEnvConfig(process.cwd());
-const db = drizzle(process.env.DATABASE_URL!);
+const client = postgres(process.env.DATABASE_URL!);
+const db = drizzle(client);
 
 const data = [
   {
@@ -146,7 +148,9 @@ async function main() {
   console.log(`Seeded ${data.length} composers.`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main()
+  .catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  })
+  .finally(() => client.end());
