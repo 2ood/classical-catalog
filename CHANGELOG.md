@@ -55,6 +55,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Adding a Spotify recording reads the pasted album (or any track of it): performer and year are filled in from Spotify, and each of the work's movements shows its matched track in a dropdown of the album's tracks (the work's own first), changeable or clearable before saving — no separate "Edit movements" step. A track link for a work without movements stays a track recording; the media type follows the pasted link
 - `GET /api/spotify/preview` (what adding a Spotify link would save); `POST /api/recordings` takes the movements' tracks or start times
 - The player's title bar has the movement control beside the work's name: « dropdown » lists every movement, with or without a score, sends both score and recording to the chosen one, and follows page turns and playback
+- A floating mini player, bottom right on every page while Spotify has a track: album cover, track and artists, previous / play-pause / next, repeat this track, like on Spotify, "Go to current track" (opens the work at the movement the track belongs to) and Disconnect
+- Recordings shown as a track list: one row per recording (performer, year, source; ✎ edit, ✕ delete), and the selected one lists its tracks — one per movement, or the piece itself — each with its own play button; the track playing now is in Spotify green, the app's one accent color
+- Editing a recording: the add form, filled in, with Cancel / Escape; link, performer and year can change and Spotify links are matched again; `PATCH /api/recordings/[id]`
+- Suggested recordings' "Listen" plays the album in your Spotify app, from the work's first track
+- For a work without movements, adding a Spotify album saves the work's own track (a "Track" dropdown when it isn't clear which)
+- `POST /api/spotify/control` (previous, next, repeat), `GET` / `PUT /api/spotify/library` (liked? like / unlike), `GET /api/spotify/locate` (the page for a playing track); the Spotify login also asks to read and change your library, for liking
 
 ### Changed
 - Movements now belong to the work: names and order are shared by all its scores and recordings, which each store their own start pages, times or tracks; existing per-score movements were migrated to their works
@@ -70,6 +76,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The composer page, the Library and the composer cloud are centred in the window
 
 ### Removed
+- The performer tiles (initials) and the recordings pane's Spotify panel with "Play this recording from the start" (replaced by the track list and the mini player)
 - Login, sessions and `proxy.ts`; `/login`, `/api/auth/*` and the header log in / log out link; `SESSION_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`
 - Vercel Blob uploads and `POST /api/scores`; `BLOB_READ_WRITE_TOKEN`
 - Neon serverless driver
@@ -77,5 +84,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The movement dropdown beside the score's page turners and the work page's "N movements" list (replaced by the title bar's movement control)
 
 ### Fixed
+- Play started whatever Spotify had paused instead of the recording; it now resumes only a track of that recording and otherwise plays the recording
+- Recordings saved as a single Spotify track didn't start (an idle Spotify accepts a bare track request but doesn't play it); every recording now starts inside its album, and an album saved for a work without movements starts at the work's track
+- Editing the selected recording left a stale edit form behind when switching recordings
+- A YouTube recording now plays after jumping to a movement
 - Scanned scores (JBIG2 images) no longer render as blank pages
 - Component tests no longer see leftover output from earlier tests (Testing Library cleanup now runs after each test)

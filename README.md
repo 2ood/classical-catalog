@@ -15,7 +15,8 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 - Search within a composer's works by title or catalogue number
 - Readable addresses, e.g. `/composer/brahms/klavierstucke-op-118/ii-intermezzo-in-a-dur-andante-teneramente`
 - Player page — PDF score viewer (upload, or search IMSLP) beside a YouTube/Spotify embed
-- Per-work performer tiles to switch between recordings; a movement control beside the work's title moves score and recording together
+- Recordings as a track list — each movement (or the piece) with its own play button, the one playing in Spotify green; edit or delete a recording; a movement control beside the work's title moves score and recording together
+- A floating mini player on every page while Spotify plays (previous / next, repeat, like, "Go to current track")
 - Movements: jump through the score by movement; a YouTube recording seeks to the chosen movement and turns the score as it plays; a Spotify recording loads each movement's track — or, with Spotify Connect, plays it in your Spotify app and turns the score as tracks change
 - PDF scores stored on local disk, served by the app
 - Admin pages for managing composers, works, recordings and scores (planned)
@@ -23,7 +24,7 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 ## Tech Stack
 
 - Next.js (latest stable, App Router), TypeScript
-- Tailwind CSS v4 — monochrome design system
+- Tailwind CSS v4 — monochrome design system with one accent color
 - PostgreSQL 17 (Docker Compose) via `postgres` (postgres.js) + Drizzle ORM
 - Local filesystem for PDF scores
 - react-pdf, YouTube and Spotify iframe embeds
@@ -105,7 +106,7 @@ storage/            uploaded PDF scores (git-ignored)
 - Tests live next to the code they test (`lib/media.ts` → `lib/media.test.ts`)
 - No e2e framework — each milestone ends with a manual check against `npm run dev`
 - Prettier formats, ESLint lints (`eslint-config-prettier` resolves conflicts)
-- Monochrome design tokens only — no ad-hoc colors; font weights 400/500 only, never bold
+- Monochrome design tokens plus one accent, Spotify green (`accent`), used only for what is playing now — no ad-hoc colors; font weights 400/500 only, never bold
 - Local-only: servers bind to 127.0.0.1 and nothing requires a login
 
 ## Roadmap

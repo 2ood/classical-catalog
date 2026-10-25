@@ -23,13 +23,6 @@ Browse by performer and play through their recordings like a playlist.
 - [ ] `/admin/composer/[id]` — edit composer, add/remove works; bring back the composer page "Edit" link
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
 
-### Milestone 15: Spotify player
-A nicer player that follows you around the app (owner's notes 2026-10-25, items 2, 3, 8).
-- [ ] Player redesign: album cover, track and performers, Play / Pause, previous / next track, repeat this track, like on Spotify; drop "Play this recording from the start". Liking needs Spotify's library permission, so Spotify is connected once more
-- [ ] Floating mini player fixed bottom-right on every page while Spotify plays, with "Go to current track": the playing track is looked up among recordings' movement tracks (or album) and opens that work at that movement
-- [ ] Suggested recordings: "Listen" plays the album's first track (the work's first movement when it lines up) in the player instead of opening spotify.com
-- [ ] Manual verification checklist
-
 ### Milestone 17: Library touches
 Small things for living with a full library (items 1, 6, 7).
 - [ ] Works list toggle "With recordings": only works that have at least one recording
@@ -38,6 +31,34 @@ Small things for living with a full library (items 1, 6, 7).
 - [ ] Manual verification checklist
 
 ## Completed
+
+### Milestone 15: Spotify player (completed 2026-10-25)
+A nicer player that follows you around the app (owner's notes 2026-10-25, items 2, 3, 8).
+- [x] Playback state also carries the album (name, cover, id), the track's URI and the repeat mode — mapping test-first
+- [x] One playback poll for the whole app (a provider in the root layout), read by the work page's player and the mini player
+- [x] Player redesign: album cover, track and performers, device; previous / Play-Pause / next, repeat this track, like (♥) on Spotify; drop "Play this recording from the start" (later moved entirely into the mini player, see below). Routes: `POST /api/spotify/control` (previous, next, repeat), `GET`/`PUT /api/spotify/library` (liked?, like / unlike) — test-first
+- [x] Liking needs `user-library-read` / `user-library-modify`: added to the login; until Spotify is connected again, ♥ offers to reconnect
+- [x] Floating mini player fixed bottom-right on every page while Spotify plays: cover, track, previous / Play-Pause / next, and "Go to current track" — the track is looked up among recordings' movement tracks (then by recording link or album) and opens that work at that movement (`GET /api/spotify/locate`) — lookup test-first
+- [x] Suggested recordings: "Listen" plays the album from the work's first track in the owner's Spotify (`POST /api/spotify/play` with an album); without Spotify Connect it still opens spotify.com
+- [x] Single pieces (works without movements, e.g. Boléro, the Ballades) found during this milestone: a recording saved as a whole album played from the album's first track. Adding now saves the album's track for the work as the recording's link (a "Track" dropdown when it isn't clear which), and Play starts existing album recordings of single pieces at the work's track — test-first
+- [x] Fix: Play resumed whatever Spotify had paused (another piece left from earlier) instead of starting this recording — a regression from dropping "Play this recording from the start". Play now resumes only a track of this recording (its own track or album, or a movement track); otherwise it plays the recording — test-first
+- [x] Recordings shown as a track list, like music apps: performer tiles (initials) replaced by one row per recording (performer · year · source, ✕ to delete, "+ Add" in the pane's header); the selected recording lists its tracks — one per movement, or the piece itself — each with its own ▶, the one playing in the accent color; movements without a track or time show "·". A track's ▶ moves score and recording together; YouTube now plays after seeking — test-first
+- [x] Fix: a recording saved as a single track link (Chopin's Ballade No. 1) didn't play: an idle Spotify answers 204 to `{ uris: [track] }` but never starts it, while album + offset plays (checked live). Every start now plays inside the album: a movement's track, a single piece found inside an album, or the recording's own track
+- [x] Edit a recording (✎ on its row): the add form, filled in; link, performer and year can change, and Spotify links are matched again (saved track choices kept when the link is unchanged). `PATCH /api/recordings/[id]` keeps movement starts it isn't sent (YouTube times), and drops them when the media type changes — test-first
+- [x] The recordings pane no longer shows a Spotify panel once connected: the mini player is the player, and gains ↻ repeat, ♥ like and "Disconnect Spotify"; the pane keeps "Connect Spotify" and the embed while not connected
+- [x] Fix: editing had no way out and, when the edited recording was also the selected one, the form and the player shared a React key, leaving a stale edit form behind on switching recordings. Distinct keys; choosing another recording (or "+ Add") closes the editor; the form has Cancel, and Escape closes it — test-first (the duplicate-key test fails on the old keys)
+- [x] Manual verification checklist — passed
+- Decisions:
+  - Why the track list: initials didn't tell recordings apart (two "KB" Karajans), a recording's contents were hidden in an editor, and one ▶ for "resume / play recording / play movement" was ambiguous — the bug above came from that ambiguity. A ▶ per track says exactly what will play
+  - One accent color joins the monochrome design: Spotify green (`--color-accent`, #1db954), only for what is playing now — the playing track's title and ▶ (it replaced a ♪ marker, at the owner's request). Green text on white is low-contrast (about 2.2:1), so it is set in medium weight and never carries information alone (the row also has `aria-current`)
+  - A single piece's one track has ▶ only with Spotify Connect; the YouTube video and the Spotify embed have their own play buttons right below
+  - Checked before planning (Spotify's February 2026 changes): previous / next / repeat / play unchanged; saving to the library is now `PUT /me/library?uris=…` and checking `GET /me/library/contains?uris=…` (scopes `user-library-modify` / `user-library-read`); search returns at most 10
+  - Checked live before building: GET /me/player still has `repeat_state` and album covers (640 / 300 / 64px); the players use the 300px one
+  - Playback is polled once, in the root layout, every 2 s while the tab is visible (and not at all when Spotify isn't set up); both players read it and refresh it after a command
+  - "Go to current track" looks the track up among recordings' movement tracks first (opening that movement), then by recording link or album (opening the work); hidden on that very page
+  - Previous / next / pause go straight to Spotify; the big player's Play still starts a queued movement or the recording when nothing is playing
+  - The login now asks for `user-library-read` / `user-library-modify`; until Spotify is connected again, ♥ shows "Connect Spotify again to like" when Spotify refuses (its check accepted the old login in testing)
+  - The mini player reads the URL, so it sits in its own `<Suspense>` in the layout (Next.js won't prerender it otherwise)
 
 ### Milestone 16: Adding recordings, better (completed 2026-10-25)
 Adding a Spotify recording of a work with movements shouldn't mean pasting every movement's track afterwards (owner's notes 2026-10-25, items 4, 5).
