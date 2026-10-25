@@ -45,6 +45,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `POST /api/library/import`, streaming its progress as newline-delimited JSON
 - Work page header: "N movements" opens the work's full movement list
 - Works list: each work's movements are listed under it, folded and unfolded with ▾ / ▸; clicking one opens the player at that movement (score at its start page, YouTube cued at its start, the Spotify embed on its track, Spotify Connect ready to play it on Play)
+- Search in a composer's works list, by title or catalogue number (accents, case and spacing ignored: `k550` finds `K. 550`), working together with the genre chips
+- Suggested recordings: a work without recordings shows up to 5 Spotify albums of it (performers and year, albums naming the work first) with "Listen ↗" and "Add"; "Add" saves the album as a Spotify recording and, when the album's tracks for the work line up with its movements, sets each movement's track. "Connect Spotify" appears when not connected, and a "Find on YouTube ↗" search link always
+- `GET` / `POST /api/spotify/suggestions` (search a work's albums; save one as a recording)
 
 ### Changed
 - Movements now belong to the work: names and order are shared by all its scores and recordings, which each store their own start pages, times or tracks; existing per-score movements were migrated to their works

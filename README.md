@@ -9,6 +9,8 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 - Library — import composers and their complete work lists from [Open Opus](https://openopus.org), with movements (or a collection's pieces) from [MusicBrainz](https://musicbrainz.org); works you entered by hand are matched, not duplicated
 - Composer cloud — names sized by number of recorded works, deterministic layout
 - Works list — grouped by genre, sorted by catalogue number, genre filter chips; each work's movements listed under it, opening the player at that movement
+- Suggested recordings — a work without recordings suggests Spotify albums of it, one click from being a recording (movement tracks set when they line up); plus a YouTube search link
+- Search within a composer's works by title or catalogue number
 - Readable addresses, e.g. `/composer/brahms/klavierstucke-op-118/ii-intermezzo-in-a-dur-andante-teneramente`
 - Player page — PDF score viewer (upload, or search IMSLP) beside a YouTube/Spotify embed
 - Per-work performer tiles to switch between recordings
