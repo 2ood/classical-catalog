@@ -4,7 +4,7 @@ import { getComposersWithCounts } from "@/lib/queries";
 
 export default function Home() {
   return (
-    <main className="p-6">
+    <main className="flex-1 flex flex-col justify-center p-6">
       <h1 className="sr-only">Composers</h1>
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <Cloud />
