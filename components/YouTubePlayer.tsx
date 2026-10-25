@@ -72,12 +72,17 @@ export default function YouTubePlayer({
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
+  // A seek before the player is ready (e.g. opened at a movement).
+  const pendingStart = useRef<number | null>(null);
   const tick = useEffectEvent((seconds: number) => onTime?.(seconds));
 
   useImperativeHandle(
     ref,
     () => ({
-      seekTo: (seconds) => playerRef.current?.seekTo(seconds, true),
+      seekTo: (seconds) => {
+        if (playerRef.current) playerRef.current.seekTo(seconds, true);
+        else pendingStart.current = seconds;
+      },
       currentTime: () => playerRef.current?.getCurrentTime() ?? null,
     }),
     [],
@@ -94,12 +99,27 @@ export default function YouTubePlayer({
       // The API replaces this element with its iframe.
       const target = document.createElement("div");
       host.replaceChildren(target);
+      // Cued at the pending start, not played.
+      const start = pendingStart.current;
+      pendingStart.current = null;
       player = new YT.Player(target, {
         videoId,
         width: "100%",
         height: "100%",
-        playerVars: { rel: 0 },
-        events: { onReady: () => (playerRef.current = player) },
+        playerVars: {
+          rel: 0,
+          ...(start !== null && { start: Math.floor(start) }),
+        },
+        events: {
+          onReady: () => {
+            playerRef.current = player;
+            // Asked for after the player was created but before it was ready.
+            if (pendingStart.current !== null) {
+              player?.seekTo(pendingStart.current, true);
+              pendingStart.current = null;
+            }
+          },
+        },
       });
       timer = setInterval(() => {
         const p = playerRef.current;

@@ -13,7 +13,12 @@ import type { WorkMovement } from "@/lib/movements";
 
 export type SyncSource = "score" | "recording";
 
-type Request = { movementId: string; source: SyncSource; seq: number };
+// "link": opened at a movement from the works list; both panes follow.
+type Request = {
+  movementId: string;
+  source: SyncSource | "link";
+  seq: number;
+};
 
 type Sync = {
   /** The work's movements, shared by the score and recording panes. */
@@ -28,12 +33,19 @@ const SyncContext = createContext<Sync | null>(null);
 /** Links the score and recording panes of a work by movement. */
 export default function PlayerSync({
   movements,
+  initialMovement,
   children,
 }: {
   movements: WorkMovement[];
+  /** Movement to open at, e.g. from `?movement=` on the work page. */
+  initialMovement?: string;
   children: ReactNode;
 }) {
-  const [request, setRequest] = useState<Request | null>(null);
+  const [request, setRequest] = useState<Request | null>(() =>
+    initialMovement
+      ? { movementId: initialMovement, source: "link", seq: 1 }
+      : null,
+  );
   const select = useCallback(
     (movementId: string, source: SyncSource) =>
       setRequest((r) => ({ movementId, source, seq: (r?.seq ?? 0) + 1 })),

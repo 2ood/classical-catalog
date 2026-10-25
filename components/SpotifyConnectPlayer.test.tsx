@@ -4,7 +4,9 @@ import PlayerSync, { usePlayerSync } from "./PlayerSync";
 import SpotifyConnectPlayer from "./SpotifyConnectPlayer";
 import type { Recording } from "@/lib/schema";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/work/w1" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/composer/beethoven/symphony-no-5-op-67",
+}));
 
 const TRACK_I = "https://open.spotify.com/track/0eBr9W1GE5nou99gRdy02J";
 const TRACK_II = "https://open.spotify.com/track/3Hfv8h49DVUT4uHd2Tu7Fd";
@@ -37,9 +39,9 @@ function ScoreSide() {
   );
 }
 
-function renderPlayer() {
+function renderPlayer(initialMovement?: string) {
   render(
-    <PlayerSync movements={movements}>
+    <PlayerSync movements={movements} initialMovement={initialMovement}>
       <ScoreSide />
       <SpotifyConnectPlayer recording={recording} />
     </PlayerSync>,
@@ -87,7 +89,7 @@ describe("SpotifyConnectPlayer", () => {
     });
     expect(connect).toHaveAttribute(
       "href",
-      "/api/spotify/login?returnTo=%2Fwork%2Fw1",
+      "/api/spotify/login?returnTo=%2Fcomposer%2Fbeethoven%2Fsymphony-no-5-op-67",
     );
     expect(screen.getByTitle("Karajan / BPO")).toHaveAttribute(
       "src",
@@ -141,6 +143,30 @@ describe("SpotifyConnectPlayer", () => {
         "/api/spotify/play",
         expect.objectContaining({
           method: "POST",
+          body: JSON.stringify({ recordingId: recording.id, movementId: "m2" }),
+        }),
+      ),
+    );
+  });
+
+  it("plays a movement opened from the works list once Play is pressed", async () => {
+    serve({
+      "/api/spotify/status": { configured: true, connected: true },
+      "/api/spotify/playback": { connected: true, state: null },
+    });
+    renderPlayer("m2");
+    const play = await screen.findByRole("button", { name: "Play" });
+    // Nothing plays in the owner's Spotify app before they ask.
+    expect(fetch).not.toHaveBeenCalledWith(
+      "/api/spotify/play",
+      expect.anything(),
+    );
+
+    fireEvent.click(play);
+    await waitFor(() =>
+      expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+        "/api/spotify/play",
+        expect.objectContaining({
           body: JSON.stringify({ recordingId: recording.id, movementId: "m2" }),
         }),
       ),

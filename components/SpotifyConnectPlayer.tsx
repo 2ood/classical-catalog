@@ -27,6 +27,9 @@ export default function SpotifyConnectPlayer({
   const [configured, setConfigured] = useState(true);
   const [playback, setPlayback] = useState<Playback | null>(null);
   const [embedTrack, setEmbedTrack] = useState<string | null>(null);
+  // Chosen before Spotify was connected (e.g. opened at a movement); Play
+  // starts it rather than playing on its own.
+  const [queued, setQueued] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const lastTrack = useRef<string | null>(null);
   const connected = playback?.connected === true;
@@ -80,9 +83,11 @@ export default function SpotifyConnectPlayer({
     if (connected) {
       // Don't echo this back to the score when the poll sees the new track.
       lastTrack.current = extractSpotifyId(track)?.id ?? null;
+      setQueued(null);
       post("/api/spotify/play", { recordingId: recording.id, movementId });
     } else {
       setEmbedTrack(track);
+      setQueued(movementId);
     }
   });
 
@@ -140,11 +145,24 @@ export default function SpotifyConnectPlayer({
         ) : (
           <button
             type="button"
-            onClick={() =>
-              state?.track
-                ? post("/api/spotify/play", { resume: true })
-                : post("/api/spotify/play", { recordingId: recording.id })
-            }
+            onClick={() => {
+              if (queued) {
+                const track = recording.movementStarts[queued];
+                lastTrack.current =
+                  typeof track === "string"
+                    ? (extractSpotifyId(track)?.id ?? null)
+                    : null;
+                setQueued(null);
+                post("/api/spotify/play", {
+                  recordingId: recording.id,
+                  movementId: queued,
+                });
+              } else if (state?.track) {
+                post("/api/spotify/play", { resume: true });
+              } else {
+                post("/api/spotify/play", { recordingId: recording.id });
+              }
+            }}
             className={button}
           >
             Play

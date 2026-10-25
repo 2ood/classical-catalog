@@ -49,4 +49,17 @@ describe("PlayerSync", () => {
     fireEvent.click(screen.getByText("score chooses II"));
     expect(onRecording).toHaveBeenCalledTimes(2);
   });
+
+  it("sends both panes to a movement opened from the works list", () => {
+    const onScore = vi.fn();
+    const onRecording = vi.fn();
+    render(
+      <PlayerSync movements={[]} initialMovement="m3">
+        <Pane source="score" onRequest={onScore} />
+        <Pane source="recording" onRequest={onRecording} />
+      </PlayerSync>,
+    );
+    expect(onScore).toHaveBeenCalledWith("m3");
+    expect(onRecording).toHaveBeenCalledWith("m3");
+  });
 });
