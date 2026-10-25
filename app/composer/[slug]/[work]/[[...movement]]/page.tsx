@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import PlayerSync from "@/components/PlayerSync";
 import RecordingsPane from "@/components/RecordingsPane";
 import ScorePane from "@/components/ScorePane";
-import WorkMovements from "@/components/WorkMovements";
+import WorkMovementNav from "@/components/WorkMovementNav";
 import { db } from "@/lib/db";
 import { composers, recordings, scores, works } from "@/lib/schema";
 import { imslpSearchUrl } from "@/lib/scores";
@@ -63,8 +63,12 @@ async function Player({ params }: Pick<PageProps<Route>, "params">) {
     .orderBy(asc(scores.uploadedAt));
 
   return (
-    <>
-      <div className="flex items-baseline gap-3 px-6 py-3 border-b border-border">
+    <PlayerSync
+      key={initialMovement}
+      movements={work.movements}
+      initialMovement={initialMovement}
+    >
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-6 py-3 border-b border-border">
         <Link
           href={`/composer/${composer.slug}`}
           aria-label={`Back to ${composer.name}`}
@@ -76,27 +80,21 @@ async function Player({ params }: Pick<PageProps<Route>, "params">) {
           <span className="text-muted">{work.catalogueNum}</span> {work.title}
           {work.key && `, ${work.key}`}
         </h1>
-        <span className="text-xs text-muted">{composer.name}</span>
-        <WorkMovements movements={work.movements} />
+        <WorkMovementNav />
+        <span className="ml-auto text-xs text-muted">{composer.name}</span>
       </div>
       <div className="flex-1 min-h-0 grid grid-cols-2 divide-x divide-border">
-        <PlayerSync
-          key={initialMovement}
-          movements={work.movements}
-          initialMovement={initialMovement}
-        >
-          <ScorePane
-            workId={work.id}
-            scores={scoreRows}
-            imslpUrl={imslpSearchUrl({ ...work, composer: composer.name })}
-          />
-          <RecordingsPane
-            workId={work.id}
-            recordings={recs}
-            query={searchQuery(composer, work)}
-          />
-        </PlayerSync>
+        <ScorePane
+          workId={work.id}
+          scores={scoreRows}
+          imslpUrl={imslpSearchUrl({ ...work, composer: composer.name })}
+        />
+        <RecordingsPane
+          workId={work.id}
+          recordings={recs}
+          query={searchQuery(composer, work)}
+        />
       </div>
-    </>
+    </PlayerSync>
   );
 }

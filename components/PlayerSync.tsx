@@ -13,19 +13,22 @@ import type { WorkMovement } from "@/lib/movements";
 
 export type SyncSource = "score" | "recording";
 
-// "link": opened at a movement from the works list; both panes follow.
-type Request = {
-  movementId: string;
-  source: SyncSource | "link";
-  seq: number;
-};
+// "link": chosen outside the panes (the works list, the title bar's
+// movement dropdown); both panes follow.
+type Source = SyncSource | "link";
+
+type Request = { movementId: string; source: Source; seq: number };
 
 type Sync = {
   /** The work's movements, shared by the score and recording panes. */
   movements: WorkMovement[];
   request: Request | null;
+  /** The movement being looked at or listened to, as far as known. */
+  current: string | null;
   /** Announce that `source` moved to a movement; the other pane follows. */
-  select: (movementId: string, source: SyncSource) => void;
+  select: (movementId: string, source: Source) => void;
+  /** A pane reached a movement on its own (e.g. a page turn); nobody follows. */
+  report: (movementId: string | null) => void;
 };
 
 const SyncContext = createContext<Sync | null>(null);
@@ -46,13 +49,19 @@ export default function PlayerSync({
       ? { movementId: initialMovement, source: "link", seq: 1 }
       : null,
   );
-  const select = useCallback(
-    (movementId: string, source: SyncSource) =>
-      setRequest((r) => ({ movementId, source, seq: (r?.seq ?? 0) + 1 })),
-    [],
+  const [current, setCurrent] = useState<string | null>(
+    initialMovement ?? null,
   );
+  const select = useCallback((movementId: string, source: Source) => {
+    setRequest((r) => ({ movementId, source, seq: (r?.seq ?? 0) + 1 }));
+    setCurrent(movementId);
+  }, []);
   return (
-    <SyncContext value={{ movements, request, select }}>{children}</SyncContext>
+    <SyncContext
+      value={{ movements, request, current, select, report: setCurrent }}
+    >
+      {children}
+    </SyncContext>
   );
 }
 

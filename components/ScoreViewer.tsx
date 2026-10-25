@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
-import MovementNav from "./MovementNav";
 import PageControls from "./PageControls";
 import { useMovementRequests, usePlayerSync } from "./PlayerSync";
 import ScoreMovementEditor from "./ScoreMovementEditor";
-import { placeMovements, type MovementMarks } from "@/lib/movements";
+import {
+  currentMovementIndex,
+  placeMovements,
+  type MovementMarks,
+} from "@/lib/movements";
 
 // Must be set in the module that renders <Document> (see react-pdf README).
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -34,7 +37,7 @@ export default function ScoreViewer({
   url: string;
   movementPages: MovementMarks<number>;
 }) {
-  const { movements, select } = usePlayerSync();
+  const { movements, report } = usePlayerSync();
   const placed = placeMovements(movements, movementPages);
   const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | null>(null);
@@ -42,7 +45,15 @@ export default function ScoreViewer({
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState(false);
   // A movement saved with a page past the end must not break the viewer.
-  const goTo = (p: number) => setPage(Math.min(Math.max(p, 1), numPages || p));
+  // The title bar's movement dropdown follows the page.
+  const goTo = (p: number) => {
+    const next = Math.min(Math.max(p, 1), numPages || p);
+    setPage(next);
+    if (placed.length > 0) {
+      const i = currentMovementIndex(placed, next);
+      report(i === -1 ? null : placed[i].id);
+    }
+  };
 
   // A playing recording reached a new movement: turn to its first page.
   useMovementRequests("score", (movementId) => {
@@ -96,14 +107,6 @@ export default function ScoreViewer({
       )}
       {numPages > 0 && (
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-          <MovementNav
-            movements={placed}
-            at={page}
-            onSelect={(m) => {
-              goTo(m.start);
-              select(m.id, "score");
-            }}
-          />
           <PageControls page={page} total={numPages} onChange={goTo} />
           {!editing && (
             <button
