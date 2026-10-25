@@ -116,12 +116,30 @@ export type RecordingPreview = {
   performer: string;
   year: number | null;
   mediaUrl: string;
+  albumUrl: string;
   /** The album's tracks, this work's first, for picking by hand. */
   tracks: { url: string; name: string }[];
   movementStarts: MovementMarks<string>;
 };
 
-/** What adding the album as a recording of the work would save. */
+/**
+ * The album's track for a single piece (a work without movements): the
+ * one track that names it, or null when none or several do.
+ */
+export function workTrack(
+  tracks: SpotifyTrack[],
+  work: WorkInfo,
+): string | null {
+  const belongs = belongsTo(work);
+  const ours = tracks.filter((t) => belongs(t.name));
+  return ours.length === 1 ? trackUrl(ours[0].id) : null;
+}
+
+/**
+ * What adding the album as a recording of the work would save. A single
+ * piece is saved as its own track, so it plays from there, not from the
+ * album's first track.
+ */
 export function recordingPreview(
   album: SpotifyAlbum,
   tracks: SpotifyTrack[],
@@ -136,7 +154,10 @@ export function recordingPreview(
   return {
     performer: performerOf(album, composer),
     year: Number(album.release_date.slice(0, 4)) || null,
-    mediaUrl: albumUrl(album.id),
+    mediaUrl:
+      (work.movements.length === 0 && workTrack(tracks, work)) ||
+      albumUrl(album.id),
+    albumUrl: albumUrl(album.id),
     tracks: ordered.map((t) => ({ url: trackUrl(t.id), name: t.name })),
     movementStarts: tracksForMovements(tracks, work, work.movements),
   };

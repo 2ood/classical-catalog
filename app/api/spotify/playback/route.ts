@@ -1,5 +1,5 @@
 import { connection, NextResponse } from "next/server";
-import type { Playback } from "@/lib/spotify";
+import { toPlayback, type Playback } from "@/lib/spotify";
 import { SpotifyNotConnected } from "@/lib/spotify-client";
 import { spotify } from "@/lib/spotify-server";
 
@@ -20,24 +20,9 @@ export async function GET() {
         { status: 502 },
       );
     }
-    const body = await res.json();
-    const item = body.item;
     return NextResponse.json({
       connected: true,
-      state: {
-        isPlaying: Boolean(body.is_playing),
-        progressMs: body.progress_ms ?? 0,
-        device: body.device?.name ?? null,
-        track: item
-          ? {
-              id: item.id,
-              name: item.name,
-              artists: (item.artists ?? [])
-                .map((a: { name: string }) => a.name)
-                .join(", "),
-            }
-          : null,
-      },
+      state: toPlayback(await res.json()),
     } satisfies Playback);
   } catch (error) {
     if (error instanceof SpotifyNotConnected) {

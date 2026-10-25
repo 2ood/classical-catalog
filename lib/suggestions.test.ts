@@ -4,6 +4,7 @@ import {
   searchQuery,
   toSuggestions,
   tracksForMovements,
+  workTrack,
   type SpotifyAlbum,
 } from "./suggestions";
 
@@ -186,5 +187,64 @@ describe("recordingPreview", () => {
       "Waltzes, Op. 39: No. 1",
     ]);
     expect(preview.tracks[0].url).toBe("https://open.spotify.com/track/t2");
+  });
+});
+
+describe("single pieces (works without movements)", () => {
+  const bolero = { title: "Boléro", catalogueNum: null, movements: [] };
+  const ballade = {
+    title: "Ballade No. 2",
+    catalogueNum: "Op. 38",
+    movements: [],
+  };
+
+  it("finds the work's one track in an album", () => {
+    expect(
+      workTrack(
+        [track(1, "Rapsodie espagnole"), track(2, "Boléro, M. 81")],
+        bolero,
+      ),
+    ).toBe("https://open.spotify.com/track/t2");
+  });
+
+  it("gives up when the album has several tracks for it, or none", () => {
+    const tracks = [
+      track(1, "Ballade No. 2, Op. 38"),
+      track(2, "Op. 38 (alternative take)"),
+    ];
+    expect(workTrack(tracks, ballade)).toBeNull();
+    expect(
+      workTrack([track(3, "Piano Concerto No. 1, Op. 11")], ballade),
+    ).toBeNull();
+  });
+
+  it("previews an album as the work's own track", () => {
+    const preview = recordingPreview(
+      album(),
+      [
+        track(1, "Piano Concerto No. 1, Op. 11: I."),
+        track(2, "Ballade No. 2 in F Major, Op. 38"),
+      ],
+      composer,
+      ballade,
+    );
+    expect(preview.mediaUrl).toBe("https://open.spotify.com/track/t2");
+    expect(preview.movementStarts).toEqual({});
+    // Still listed, to pick another by hand.
+    expect(preview.tracks.map((t) => t.url)[0]).toBe(
+      "https://open.spotify.com/track/t2",
+    );
+  });
+
+  it("keeps the album link when it can't tell which track is the work", () => {
+    const preview = recordingPreview(
+      album(),
+      [track(1, "Etudes, Op. 10")],
+      composer,
+      ballade,
+    );
+    expect(preview.mediaUrl).toBe(
+      "https://open.spotify.com/album/5Z9iiGl2FcIfa3BMiv6OIw",
+    );
   });
 });

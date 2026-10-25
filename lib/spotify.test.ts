@@ -2,12 +2,16 @@
 import { describe, expect, it } from "vitest";
 import {
   authorizeUrl,
+  controlRequest,
   createVerifier,
+  libraryRequest,
   movementForTrack,
   pkceChallenge,
   playRequest,
   SCOPES,
   spotifyUri,
+  toPlayback,
+  trackInRecording,
 } from "./spotify";
 
 const ALBUM = "https://open.spotify.com/album/6Pqlj0jyStFJgTidjdLGHC";
@@ -54,6 +58,9 @@ describe("authorizeUrl", () => {
       expect.arrayContaining([
         "user-read-playback-state",
         "user-modify-playback-state",
+        // Liking tracks (PUT /me/library, GET /me/library/contains).
+        "user-library-read",
+        "user-library-modify",
       ]),
     );
   });
@@ -112,5 +119,144 @@ describe("movementForTrack", () => {
     const starts = { m1: TRACK_I, m2: TRACK_II, m3: 120 };
     expect(movementForTrack(starts, "3Hfv8h49DVUT4uHd2Tu7Fd")).toBe("m2");
     expect(movementForTrack(starts, "somethingElse000000000")).toBeNull();
+  });
+});
+
+describe("toPlayback", () => {
+  // Trimmed from a live GET /me/player response.
+  const live = {
+    device: { name: "Desktop" },
+    repeat_state: "track",
+    is_playing: true,
+    progress_ms: 61000,
+    item: {
+      id: "1lo4yMsQvwLUCO7q0YL102",
+      uri: "spotify:track:1lo4yMsQvwLUCO7q0YL102",
+      name: "6 Piano Pieces, Op. 118: No. 2, Intermezzo in A Major",
+      artists: [{ name: "Johannes Brahms" }, { name: "Stephen Kovacevich" }],
+      album: {
+        id: "2MHT5GNYOAMOWZnntI70z2",
+        name: "Brahms: Waltzes, Op. 39; Rhapsodies, Op. 79; Klavierstücke, Op. 118",
+        images: [
+          { height: 640, width: 640, url: "https://i.scdn.co/image/big" },
+          { height: 300, width: 300, url: "https://i.scdn.co/image/mid" },
+          { height: 64, width: 64, url: "https://i.scdn.co/image/small" },
+        ],
+      },
+    },
+  };
+
+  it("keeps what the players show", () => {
+    expect(toPlayback(live)).toEqual({
+      isPlaying: true,
+      progressMs: 61000,
+      device: "Desktop",
+      repeat: "track",
+      track: {
+        id: "1lo4yMsQvwLUCO7q0YL102",
+        uri: "spotify:track:1lo4yMsQvwLUCO7q0YL102",
+        name: "6 Piano Pieces, Op. 118: No. 2, Intermezzo in A Major",
+        artists: "Johannes Brahms, Stephen Kovacevich",
+        album: {
+          id: "2MHT5GNYOAMOWZnntI70z2",
+          name: "Brahms: Waltzes, Op. 39; Rhapsodies, Op. 79; Klavierstücke, Op. 118",
+          cover: "https://i.scdn.co/image/mid",
+        },
+      },
+    });
+  });
+
+  it("copes with no track, no device and no covers", () => {
+    expect(
+      toPlayback({ is_playing: false, item: null, repeat_state: "off" }),
+    ).toEqual({
+      isPlaying: false,
+      progressMs: 0,
+      device: null,
+      repeat: "off",
+      track: null,
+    });
+    const noCover = toPlayback({
+      ...live,
+      item: { ...live.item, album: { ...live.item.album, images: [] } },
+    });
+    expect(noCover.track?.album.cover).toBeNull();
+  });
+});
+
+describe("controlRequest", () => {
+  it.each([
+    ["previous", { method: "POST", path: "/me/player/previous" }],
+    ["next", { method: "POST", path: "/me/player/next" }],
+    ["repeat-track", { method: "PUT", path: "/me/player/repeat?state=track" }],
+    ["repeat-off", { method: "PUT", path: "/me/player/repeat?state=off" }],
+  ])("%s", (action, request) => {
+    expect(controlRequest(action)).toEqual(request);
+  });
+
+  it("knows nothing else", () => {
+    expect(controlRequest("shuffle")).toBeNull();
+  });
+});
+
+describe("libraryRequest", () => {
+  const ID = "1lo4yMsQvwLUCO7q0YL102";
+  const uris = "uris=spotify%3Atrack%3A1lo4yMsQvwLUCO7q0YL102";
+
+  it("likes, unlikes and asks about a track by URI", () => {
+    expect(libraryRequest(ID, true)).toEqual({
+      method: "PUT",
+      path: `/me/library?${uris}`,
+    });
+    expect(libraryRequest(ID, false)).toEqual({
+      method: "DELETE",
+      path: `/me/library?${uris}`,
+    });
+    expect(libraryRequest(ID, null)).toEqual({
+      method: "GET",
+      path: `/me/library/contains?${uris}`,
+    });
+  });
+
+  it("only takes Spotify track ids", () => {
+    expect(libraryRequest("x/../me", true)).toBeNull();
+  });
+});
+
+describe("trackInRecording", () => {
+  const album = {
+    mediaUrl: ALBUM,
+    movementStarts: { m1: TRACK_I },
+  };
+  const single = {
+    mediaUrl: `${TRACK_II}?si=0a7d551317cf4936`,
+    movementStarts: {},
+  };
+
+  it("knows a track of the recording's album or movements", () => {
+    expect(
+      trackInRecording(album, {
+        id: "zzzzzzzzzzzzzzzzzzzzzz",
+        albumId: "6Pqlj0jyStFJgTidjdLGHC",
+      }),
+    ).toBe(true);
+    expect(
+      trackInRecording(album, {
+        id: "0eBr9W1GE5nou99gRdy02J",
+        albumId: "other00000000000000000",
+      }),
+    ).toBe(true);
+    expect(
+      trackInRecording(single, { id: "3Hfv8h49DVUT4uHd2Tu7Fd", albumId: "x" }),
+    ).toBe(true);
+  });
+
+  it("doesn't take another piece left paused for this recording", () => {
+    expect(
+      trackInRecording(single, {
+        id: "0eBr9W1GE5nou99gRdy02J",
+        albumId: "6Pqlj0jyStFJgTidjdLGHC",
+      }),
+    ).toBe(false);
   });
 });

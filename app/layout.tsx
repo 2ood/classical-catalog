@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { IM_Fell_English, Inter } from "next/font/google";
 import Link from "next/link";
+import { Suspense } from "react";
+import MiniPlayer from "@/components/MiniPlayer";
+import SpotifyPlaybackProvider from "@/components/SpotifyPlayback";
 import "./globals.css";
 
 const inter = Inter({
@@ -27,15 +30,24 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${imFell.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <header className="h-12 shrink-0 flex items-center px-6 border-b border-border text-sm">
-          <Link href="/" className="font-serif text-lg">
-            Classical Catalog
-          </Link>
-          <Link href="/library" className="ml-auto text-muted hover:text-text">
-            Library
-          </Link>
-        </header>
-        {children}
+        <SpotifyPlaybackProvider>
+          <header className="h-12 shrink-0 flex items-center px-6 border-b border-border text-sm">
+            <Link href="/" className="font-serif text-lg">
+              Classical Catalog
+            </Link>
+            <Link
+              href="/library"
+              className="ml-auto text-muted hover:text-text"
+            >
+              Library
+            </Link>
+          </header>
+          {children}
+          {/* Reads the URL (Go to current track), so it renders on request. */}
+          <Suspense fallback={null}>
+            <MiniPlayer />
+          </Suspense>
+        </SpotifyPlaybackProvider>
       </body>
     </html>
   );

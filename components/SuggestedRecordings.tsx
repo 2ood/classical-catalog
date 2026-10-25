@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useSpotifyPlayback } from "./SpotifyPlayback";
 import type { Suggestion } from "@/lib/suggestions";
 
 const button = "px-2 py-0.5 border border-border hover:bg-surface";
@@ -14,8 +15,9 @@ type State =
   | { status: "failed"; error: string };
 
 /**
- * For a work without recordings: Spotify albums to start from ("Add" opens
- * the add form with the album), and a YouTube search link.
+ * For a work without recordings: Spotify albums to start from ("Listen"
+ * plays one in the owner's Spotify, "Add" opens the add form with it), and
+ * a YouTube search link.
  */
 export default function SuggestedRecordings({
   workId,
@@ -30,6 +32,9 @@ export default function SuggestedRecordings({
 }) {
   const pathname = usePathname();
   const [state, setState] = useState<State>({ status: "loading" });
+  const { playback, command } = useSpotifyPlayback();
+  const connected = playback?.connected === true;
+  const [playError, setPlayError] = useState<string | null>(null);
 
   useEffect(() => {
     let stale = false;
@@ -87,14 +92,32 @@ export default function SuggestedRecordings({
                     {[s.performer, s.year].filter(Boolean).join(" · ")}
                   </p>
                 </div>
-                <a
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted hover:text-text"
-                >
-                  Listen ↗
-                </a>
+                {connected ? (
+                  <button
+                    type="button"
+                    aria-label={`Listen to ${s.name}`}
+                    onClick={async () =>
+                      setPlayError(
+                        await command("/api/spotify/play", {
+                          workId,
+                          album: s.url,
+                        }),
+                      )
+                    }
+                    className="text-muted hover:text-text"
+                  >
+                    Listen
+                  </button>
+                ) : (
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted hover:text-text"
+                  >
+                    Listen ↗
+                  </a>
+                )}
                 <button
                   type="button"
                   onClick={() => onAdd(s.url)}
@@ -107,6 +130,7 @@ export default function SuggestedRecordings({
             ))}
           </ul>
         ))}
+      {playError && <p className="text-muted">{playError}</p>}
       <a
         href={`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`}
         target="_blank"

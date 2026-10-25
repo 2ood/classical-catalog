@@ -107,4 +107,29 @@ describe("POST /api/spotify/play", () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it.each([
+    [
+      "a work id that is malformed",
+      {
+        workId: "x",
+        album: "https://open.spotify.com/album/6Pqlj0jyStFJgTidjdLGHC",
+      },
+    ],
+    [
+      "a link that is not an album",
+      {
+        workId: "3f2b8c1e-6a7d-4c1b-9e2f-0a1b2c3d4e5f",
+        album: "https://open.spotify.com/track/0eBr9W1GE5nou99gRdy02J",
+      },
+    ],
+  ])("rejects playing an album with %s", async (_, body) => {
+    const res = await play(
+      new Request("http://127.0.0.1:3000/api/spotify/play", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
 });

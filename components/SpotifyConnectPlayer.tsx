@@ -1,21 +1,22 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMovementRequests, usePlayerSync } from "./PlayerSync";
 import SpotifyEmbed from "./SpotifyEmbed";
+import { useSpotifyPlayback } from "./SpotifyPlayback";
 import { extractSpotifyId } from "@/lib/media";
-import { movementForTrack, type Playback } from "@/lib/spotify";
+import { movementForTrack } from "@/lib/spotify";
 import type { Recording } from "@/lib/schema";
 
-const POLL_MS = 2000;
 const button = "px-3 py-1 border border-border hover:bg-surface";
 
 /**
  * A Spotify recording played on the owner's Spotify app (Spotify Connect).
- * Falls back to the embed until Spotify is connected. Either way, a
- * movement chosen in the score plays its track; when connected, the
- * playing track also turns the score to its movement.
+ * Until Spotify is connected it shows the embed (and "Connect Spotify");
+ * once connected it draws nothing — the mini player shows what plays — and
+ * keeps the work in step: a movement chosen (a track's ▶, the score) plays
+ * its track, and the playing track turns the score to its movement.
  */
 export default function SpotifyConnectPlayer({
   recording,
@@ -23,71 +24,42 @@ export default function SpotifyConnectPlayer({
   recording: Recording;
 }) {
   const { select } = usePlayerSync();
+  const { configured, playback, command } = useSpotifyPlayback();
   const pathname = usePathname();
-  const [configured, setConfigured] = useState(true);
-  const [playback, setPlayback] = useState<Playback | null>(null);
   const [embedTrack, setEmbedTrack] = useState<string | null>(null);
-  // Chosen before Spotify was connected (e.g. opened at a movement); Play
-  // starts it rather than playing on its own.
-  const [queued, setQueued] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const lastTrack = useRef<string | null>(null);
   const connected = playback?.connected === true;
+  const state = playback?.connected ? playback.state : null;
+  const trackId = state?.track?.id;
 
-  const onPlayback = useEffectEvent((next: Playback) => {
-    setPlayback(next);
-    const trackId = next.connected ? next.state?.track?.id : undefined;
+  // Spotify moved to a track of one of this recording's movements: the
+  // score follows.
+  useEffect(() => {
     if (!trackId || trackId === lastTrack.current) return;
     lastTrack.current = trackId;
     const movementId = movementForTrack(recording.movementStarts, trackId);
     if (movementId) select(movementId, "recording");
-  });
+  }, [trackId, recording.movementStarts, select]);
 
-  useEffect(() => {
-    let stopped = false;
-    fetch("/api/spotify/status")
-      .then((res) => res.json())
-      .then((status) => !stopped && setConfigured(status.configured))
-      .catch(() => {});
-    async function poll() {
-      if (document.visibilityState !== "visible") return;
-      const res = await fetch("/api/spotify/playback").catch(() => null);
-      if (!stopped && res?.ok) onPlayback(await res.json());
-    }
-    poll();
-    const timer = setInterval(poll, POLL_MS);
-    return () => {
-      stopped = true;
-      clearInterval(timer);
-    };
-  }, []);
+  const run = async (path: string, body?: object) =>
+    setError(await command(path, body));
 
-  async function post(path: string, body?: object) {
-    setError(null);
-    const res = await fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: body && JSON.stringify(body),
-    });
-    if (!res.ok) {
-      setError(
-        (await res.json().catch(() => null))?.error ??
-          `Spotify request failed (${res.status})`,
-      );
-    }
+  function playMovement(movementId: string) {
+    const track = recording.movementStarts[movementId];
+    // Don't echo this back to the score when the poll sees the new track.
+    lastTrack.current =
+      typeof track === "string" ? (extractSpotifyId(track)?.id ?? null) : null;
+    run("/api/spotify/play", { recordingId: recording.id, movementId });
   }
 
   useMovementRequests("recording", (movementId) => {
     const track = recording.movementStarts[movementId];
     if (typeof track !== "string") return;
     if (connected) {
-      // Don't echo this back to the score when the poll sees the new track.
-      lastTrack.current = extractSpotifyId(track)?.id ?? null;
-      setQueued(null);
-      post("/api/spotify/play", { recordingId: recording.id, movementId });
+      playMovement(movementId);
     } else {
       setEmbedTrack(track);
-      setQueued(movementId);
     }
   });
 
@@ -119,76 +91,6 @@ export default function SpotifyConnectPlayer({
     );
   }
 
-  const state = playback.state;
-  return (
-    <div className="flex flex-col gap-3 border border-border p-4 text-sm">
-      <h3 className="text-xs uppercase text-muted">Spotify</h3>
-      {state?.track ? (
-        <p>
-          {state.track.name} — {state.track.artists}
-          {state.device && (
-            <span className="text-muted"> · on {state.device}</span>
-          )}
-        </p>
-      ) : (
-        <p className="text-muted">Nothing playing.</p>
-      )}
-      <div className="flex flex-wrap gap-2">
-        {state?.isPlaying ? (
-          <button
-            type="button"
-            onClick={() => post("/api/spotify/pause")}
-            className={button}
-          >
-            Pause
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              if (queued) {
-                const track = recording.movementStarts[queued];
-                lastTrack.current =
-                  typeof track === "string"
-                    ? (extractSpotifyId(track)?.id ?? null)
-                    : null;
-                setQueued(null);
-                post("/api/spotify/play", {
-                  recordingId: recording.id,
-                  movementId: queued,
-                });
-              } else if (state?.track) {
-                post("/api/spotify/play", { resume: true });
-              } else {
-                post("/api/spotify/play", { recordingId: recording.id });
-              }
-            }}
-            className={button}
-          >
-            Play
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() =>
-            post("/api/spotify/play", { recordingId: recording.id })
-          }
-          className={button}
-        >
-          Play this recording from the start
-        </button>
-        <button
-          type="button"
-          onClick={async () => {
-            await post("/api/spotify/disconnect");
-            setPlayback({ connected: false });
-          }}
-          className="ml-auto text-muted hover:text-text"
-        >
-          Disconnect
-        </button>
-      </div>
-      {error && <p className="text-muted">{error}</p>}
-    </div>
-  );
+  // Connected: what is playing, and its controls, are in the mini player.
+  return error ? <p className="text-sm text-muted">{error}</p> : null;
 }

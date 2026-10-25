@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PlayerSync, { usePlayerSync } from "./PlayerSync";
 import SpotifyConnectPlayer from "./SpotifyConnectPlayer";
+import SpotifyPlaybackProvider from "./SpotifyPlayback";
 import type { Recording } from "@/lib/schema";
 
 vi.mock("next/navigation", () => ({
@@ -41,32 +42,58 @@ function ScoreSide() {
 
 function renderPlayer(initialMovement?: string) {
   render(
-    <PlayerSync movements={movements} initialMovement={initialMovement}>
-      <ScoreSide />
-      <SpotifyConnectPlayer recording={recording} />
-    </PlayerSync>,
+    <SpotifyPlaybackProvider>
+      <PlayerSync movements={movements} initialMovement={initialMovement}>
+        <ScoreSide />
+        <SpotifyConnectPlayer recording={recording} />
+      </PlayerSync>
+    </SpotifyPlaybackProvider>,
   );
 }
 
 function serve(routes: Record<string, unknown>) {
   vi.mocked(fetch).mockImplementation(async (input) => {
     const url = String(input);
-    const body = routes[url];
+    const body = routes[url] ?? routes[url.split("?")[0]];
     return body === undefined
       ? new Response(null, { status: 204 })
       : Response.json(body);
   });
 }
 
-const playing = (trackUrl: string, name: string) => ({
-  connected: true,
-  state: {
-    isPlaying: true,
-    progressMs: 1000,
-    device: "Desktop",
-    track: { id: trackUrl.split("/").pop(), name, artists: "Karajan" },
-  },
-});
+const playing = (
+  trackUrl: string,
+  name: string,
+  repeat: "off" | "track" = "off",
+) => {
+  const id = trackUrl.split("/").pop();
+  return {
+    connected: true,
+    state: {
+      isPlaying: true,
+      progressMs: 1000,
+      device: "Desktop",
+      repeat,
+      track: {
+        id,
+        uri: `spotify:track:${id}`,
+        name,
+        artists: "Karajan, Berliner Philharmoniker",
+        album: {
+          id: "6Pqlj0jyStFJgTidjdLGHC",
+          name: "Beethoven: Symphony No. 5",
+          cover: "https://i.scdn.co/image/mid",
+        },
+      },
+    },
+  };
+};
+
+const posts = (path: string) =>
+  vi
+    .mocked(fetch)
+    .mock.calls.filter(([url, init]) => url === path && init?.method === "POST")
+    .map(([, init]) => JSON.parse((init?.body as string) ?? "null"));
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
@@ -106,19 +133,6 @@ describe("SpotifyConnectPlayer", () => {
     expect(await screen.findByText(/SPOTIFY_CLIENT_ID/)).toBeInTheDocument();
   });
 
-  it("shows what is playing and where", async () => {
-    serve({
-      "/api/spotify/status": { configured: true, connected: true },
-      "/api/spotify/playback": playing(TRACK_I, "I. Allegro con brio"),
-    });
-    renderPlayer();
-    expect(
-      await screen.findByText("I. Allegro con brio — Karajan"),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/on Desktop/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
-  });
-
   it("turns the score when the playing track belongs to a movement", async () => {
     serve({
       "/api/spotify/status": { configured: true, connected: true },
@@ -130,46 +144,37 @@ describe("SpotifyConnectPlayer", () => {
     );
   });
 
+  it("draws nothing once connected: the mini player shows what plays", async () => {
+    serve({
+      "/api/spotify/status": { configured: true, connected: true },
+      "/api/spotify/playback": playing(TRACK_I, "I. Allegro con brio"),
+    });
+    renderPlayer();
+    await waitFor(() =>
+      expect(screen.getByLabelText("score request")).toHaveTextContent("m1"),
+    );
+    expect(screen.queryByRole("link", { name: "Connect Spotify" })).toBeNull();
+    expect(screen.queryByTitle("Karajan / BPO")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Play" })).toBeNull();
+  });
+
   it("plays the movement chosen in the score", async () => {
     serve({
       "/api/spotify/status": { configured: true, connected: true },
       "/api/spotify/playback": { connected: true, state: null },
     });
     renderPlayer();
-    await screen.findByRole("button", { name: "Play" });
+    // Connected once the first playback answer lands.
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("link", { name: "Connect Spotify" }),
+      ).toBeNull(),
+    );
     fireEvent.click(screen.getByText("score chooses II"));
     await waitFor(() =>
-      expect(vi.mocked(fetch)).toHaveBeenCalledWith(
-        "/api/spotify/play",
-        expect.objectContaining({
-          method: "POST",
-          body: JSON.stringify({ recordingId: recording.id, movementId: "m2" }),
-        }),
-      ),
-    );
-  });
-
-  it("plays a movement opened from the works list once Play is pressed", async () => {
-    serve({
-      "/api/spotify/status": { configured: true, connected: true },
-      "/api/spotify/playback": { connected: true, state: null },
-    });
-    renderPlayer("m2");
-    const play = await screen.findByRole("button", { name: "Play" });
-    // Nothing plays in the owner's Spotify app before they ask.
-    expect(fetch).not.toHaveBeenCalledWith(
-      "/api/spotify/play",
-      expect.anything(),
-    );
-
-    fireEvent.click(play);
-    await waitFor(() =>
-      expect(vi.mocked(fetch)).toHaveBeenCalledWith(
-        "/api/spotify/play",
-        expect.objectContaining({
-          body: JSON.stringify({ recordingId: recording.id, movementId: "m2" }),
-        }),
-      ),
+      expect(posts("/api/spotify/play")).toEqual([
+        { recordingId: recording.id, movementId: "m2" },
+      ]),
     );
   });
 });
