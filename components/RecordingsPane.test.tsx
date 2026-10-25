@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PlayerSync from "./PlayerSync";
 import RecordingsPane from "./RecordingsPane";
 import SpotifyPlaybackProvider from "./SpotifyPlayback";
+import YouTubeDockProvider from "./YouTubeDock";
 import type { Queue } from "./QueueBar";
 import type { Recording } from "@/lib/schema";
 
@@ -27,16 +28,18 @@ const zimerman = recording("r2", "Krystian Zimerman");
 function renderPane(queue: Queue | null = null, initialRecordingId?: string) {
   render(
     <SpotifyPlaybackProvider>
-      <PlayerSync movements={[]}>
-        <RecordingsPane
-          workId="w1"
-          recordings={[cho, zimerman]}
-          workTitle="Ballade No. 1"
-          query="Chopin Ballade No. 1 Op. 23"
-          queue={queue}
-          initialRecordingId={initialRecordingId}
-        />
-      </PlayerSync>
+      <YouTubeDockProvider>
+        <PlayerSync movements={[]}>
+          <RecordingsPane
+            workId="w1"
+            recordings={[cho, zimerman]}
+            workTitle="Ballade No. 1"
+            query="Chopin Ballade No. 1 Op. 23"
+            queue={queue}
+            initialRecordingId={initialRecordingId}
+          />
+        </PlayerSync>
+      </YouTubeDockProvider>
     </SpotifyPlaybackProvider>,
   );
 }

@@ -199,6 +199,26 @@ describe("MiniPlayer", () => {
     ).toHaveAttribute("href", "/api/spotify/login?returnTo=%2F");
   });
 
+  it("minimizes to the track's name, and expands again", async () => {
+    serve(playing());
+    renderMini();
+    await screen.findByText("Symphony No. 5: II. Andante con moto");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Minimize the player" }),
+    );
+    expect(
+      screen.getByText("Symphony No. 5: II. Andante con moto"),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Repeat this track" }),
+    ).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand the player" }));
+    expect(
+      screen.getByRole("button", { name: "Repeat this track" }),
+    ).toBeTruthy();
+  });
+
   it("disconnects Spotify", async () => {
     serve(playing());
     renderMini();

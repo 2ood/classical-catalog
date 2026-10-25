@@ -7,6 +7,7 @@ import RecordingList from "./RecordingList";
 import QueueBar, { type Queue } from "./QueueBar";
 import RecordingPlayer from "./RecordingPlayer";
 import SuggestedRecordings from "./SuggestedRecordings";
+import { useYouTube } from "./YouTubeDock";
 import type { Recording } from "@/lib/schema";
 
 export default function RecordingsPane({
@@ -35,9 +36,16 @@ export default function RecordingsPane({
   initialRecordingId?: string;
 }) {
   const router = useRouter();
+  const docked = useYouTube().video?.recordingId;
   const [selectedId, setSelectedId] = useState(
-    queue?.recordingId ?? initialRecordingId ?? recordings[0]?.id,
+    queue?.recordingId ??
+      initialRecordingId ??
+      // Back at the work whose video is playing: show that recording.
+      recordings.find((r) => r.id === docked)?.id ??
+      recordings[0]?.id,
   );
+  // Picked in the list (not arrived at), so it may replace a playing video.
+  const [chosen, setChosen] = useState(false);
   const [adding, setAdding] = useState(false);
   // A suggested album the add form starts from.
   const [addUrl, setAddUrl] = useState("");
@@ -94,6 +102,7 @@ export default function RecordingsPane({
             likes={likes}
             onSelect={(id) => {
               setSelectedId(id);
+              setChosen(true);
               setEditingId(null);
             }}
             onDelete={handleDelete}
@@ -128,6 +137,8 @@ export default function RecordingsPane({
         <RecordingPlayer
           key={`player-${selected.id}`}
           recording={selected}
+          workTitle={workTitle}
+          chosen={chosen}
           {...(queue?.recordingId === selected.id && {
             autoplay: true,
             onEnded: () => queue.next && router.push(queue.next),

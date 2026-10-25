@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import MiniPlayer from "@/components/MiniPlayer";
 import SpotifyPlaybackProvider from "@/components/SpotifyPlayback";
+import YouTubeDockProvider from "@/components/YouTubeDock";
 import "./globals.css";
 
 const inter = Inter({
@@ -31,27 +32,33 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <SpotifyPlaybackProvider>
-          <header className="h-12 shrink-0 flex items-center px-6 border-b border-border text-sm">
-            <Link href="/" className="font-serif text-lg">
-              Classical Catalog
-            </Link>
-            <nav className="ml-auto flex gap-4">
-              <Link href="/liked" className="text-muted hover:text-text">
-                Liked
+          <YouTubeDockProvider
+            // Stacked under the floating YouTube video.
+            below={
+              // Reads the URL (Go to current track), so it renders on request.
+              <Suspense fallback={null}>
+                <MiniPlayer />
+              </Suspense>
+            }
+          >
+            <header className="h-12 shrink-0 flex items-center px-6 border-b border-border text-sm">
+              <Link href="/" className="font-serif text-lg">
+                Classical Catalog
               </Link>
-              <Link href="/performers" className="text-muted hover:text-text">
-                Performers
-              </Link>
-              <Link href="/library" className="text-muted hover:text-text">
-                Library
-              </Link>
-            </nav>
-          </header>
-          {children}
-          {/* Reads the URL (Go to current track), so it renders on request. */}
-          <Suspense fallback={null}>
-            <MiniPlayer />
-          </Suspense>
+              <nav className="ml-auto flex gap-4">
+                <Link href="/liked" className="text-muted hover:text-text">
+                  Liked
+                </Link>
+                <Link href="/performers" className="text-muted hover:text-text">
+                  Performers
+                </Link>
+                <Link href="/library" className="text-muted hover:text-text">
+                  Library
+                </Link>
+              </nav>
+            </header>
+            {children}
+          </YouTubeDockProvider>
         </SpotifyPlaybackProvider>
       </body>
     </html>

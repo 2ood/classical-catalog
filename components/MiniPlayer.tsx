@@ -8,14 +8,15 @@ import PlayerControls, { playerButton } from "./PlayerControls";
 import { useSpotifyPlayback } from "./SpotifyPlayback";
 
 /**
- * Bottom-right, on every page while Spotify has a track: cover, track,
- * ⏮ ⏯ ⏭, repeat, like, a link to the work (at the movement) the track
- * belongs to, and Disconnect.
+ * On every page while Spotify has a track (stacked bottom-right by the
+ * layout): cover, track, ⏮ ⏯ ⏭, repeat, like, a link to the work (at the
+ * movement) the track belongs to, and Disconnect. Minimizes to the track.
  */
 export default function MiniPlayer() {
   const { playback, command, refresh } = useSpotifyPlayback();
   const pathname = usePathname();
   const [error, setError] = useState<string | null>(null);
+  const [minimized, setMinimized] = useState(false);
   // Where the track lives, for the track it was looked up for.
   const [located, setLocated] = useState<{
     track: string;
@@ -41,11 +42,34 @@ export default function MiniPlayer() {
   if (!track) return null;
   const repeating = playback?.connected && playback.state?.repeat === "track";
   const path = located?.track === track.id ? located.path : null;
+  const toggle = (
+    <button
+      type="button"
+      aria-label={minimized ? "Expand the player" : "Minimize the player"}
+      aria-expanded={!minimized}
+      onClick={() => setMinimized((m) => !m)}
+      className="shrink-0 text-base leading-none text-muted hover:text-text"
+    >
+      {minimized ? "▴" : "▾"}
+    </button>
+  );
+
+  if (minimized) {
+    return (
+      <aside
+        aria-label="Now playing"
+        className="flex items-center gap-2 px-3 py-1.5 bg-bg border border-border rounded-md shadow-lg text-sm"
+      >
+        <p className="flex-1 min-w-0 truncate">{track.name}</p>
+        {toggle}
+      </aside>
+    );
+  }
 
   return (
     <aside
       aria-label="Now playing"
-      className="fixed bottom-4 right-4 z-50 w-80 flex flex-col gap-2 p-3 bg-bg border border-border rounded-md shadow-lg text-sm"
+      className="flex flex-col gap-2 p-3 bg-bg border border-border rounded-md shadow-lg text-sm"
     >
       <div className="flex items-center gap-3">
         {track.album.cover && (
@@ -57,10 +81,11 @@ export default function MiniPlayer() {
             className="w-12 h-12 shrink-0 rounded-sm object-cover"
           />
         )}
-        <div className="min-w-0">
+        <div className="flex-1 min-w-0">
           <p className="truncate">{track.name}</p>
           <p className="text-xs text-muted truncate">{track.artists}</p>
         </div>
+        {toggle}
       </div>
       <div className="flex items-center gap-2">
         <PlayerControls
