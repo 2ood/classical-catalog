@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { parseMovementStarts } from "@/lib/movements";
+import { linkPerformers } from "@/lib/performer-store";
 import { parseRecordingInput, UUID } from "@/lib/recordings";
 import { recordings, works } from "@/lib/schema";
 
@@ -86,5 +87,6 @@ export async function PATCH(
     .set({ performer, year, mediaType, mediaUrl, movementStarts })
     .where(eq(recordings.id, id))
     .returning();
+  await linkPerformers(db, id, performer);
   return NextResponse.json(updated);
 }

@@ -1,7 +1,15 @@
 import "server-only";
 import { asc, count, countDistinct, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "./db";
-import { composerSchools, composers, recordings, works } from "./schema";
+import {
+  composerSchools,
+  composers,
+  performerAliases,
+  performers,
+  recordingPerformers,
+  recordings,
+  works,
+} from "./schema";
 
 /**
  * All composers with the number of their works that have ≥1 recording,
@@ -79,4 +87,93 @@ export async function getSchools(composerId: string): Promise<string[]> {
     .where(eq(composerSchools.composerId, composerId))
     .orderBy(asc(composerSchools.name));
   return rows.map((r) => r.name);
+}
+
+/** All performers with their number of recordings, by name. */
+export function getPerformers() {
+  return db
+    .select({
+      id: performers.id,
+      name: performers.name,
+      slug: performers.slug,
+      kind: performers.kind,
+      instrument: performers.instrument,
+      recordings: count(recordingPerformers.recordingId),
+    })
+    .from(performers)
+    .leftJoin(
+      recordingPerformers,
+      eq(recordingPerformers.performerId, performers.id),
+    )
+    .groupBy(performers.id)
+    .orderBy(asc(performers.name));
+}
+
+/**
+ * A performer, the other names they go by, and their recordings with each
+ * work and composer (by composer, then catalogue number).
+ */
+export async function getPerformer(slug: string) {
+  const [performer] = await db
+    .select()
+    .from(performers)
+    .where(eq(performers.slug, slug));
+  if (!performer) return null;
+
+  const [aliases, recs] = await Promise.all([
+    db
+      .select({ name: performerAliases.name })
+      .from(performerAliases)
+      .where(eq(performerAliases.performerId, performer.id)),
+    db
+      .select({
+        id: recordings.id,
+        performer: recordings.performer,
+        year: recordings.year,
+        mediaType: recordings.mediaType,
+        work: {
+          slug: works.slug,
+          title: works.title,
+          catalogueNum: works.catalogueNum,
+          key: works.key,
+        },
+        composer: {
+          slug: composers.slug,
+          name: composers.name,
+          born: composers.born,
+        },
+      })
+      .from(recordingPerformers)
+      .innerJoin(recordings, eq(recordings.id, recordingPerformers.recordingId))
+      .innerJoin(works, eq(works.id, recordings.workId))
+      .innerJoin(composers, eq(composers.id, works.composerId))
+      .where(eq(recordingPerformers.performerId, performer.id)),
+  ]);
+  return {
+    performer,
+    aliases: aliases
+      .map((a) => a.name)
+      .filter((name) => name !== performer.name),
+    recordings: recs,
+  };
+}
+
+/** The performers of a work's recordings, in text order, by recording id. */
+export async function getRecordingPerformers(workId: string) {
+  const rows = await db
+    .select({
+      recordingId: recordingPerformers.recordingId,
+      name: performers.name,
+      slug: performers.slug,
+    })
+    .from(recordingPerformers)
+    .innerJoin(performers, eq(performers.id, recordingPerformers.performerId))
+    .innerJoin(recordings, eq(recordings.id, recordingPerformers.recordingId))
+    .where(eq(recordings.workId, workId))
+    .orderBy(asc(recordingPerformers.position));
+  const byRecording: Record<string, { name: string; slug: string }[]> = {};
+  for (const { recordingId, ...p } of rows) {
+    (byRecording[recordingId] ??= []).push(p);
+  }
+  return byRecording;
 }

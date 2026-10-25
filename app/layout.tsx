@@ -35,12 +35,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="font-serif text-lg">
               Classical Catalog
             </Link>
-            <Link
-              href="/library"
-              className="ml-auto text-muted hover:text-text"
-            >
-              Library
-            </Link>
+            <nav className="ml-auto flex gap-4">
+              <Link href="/performers" className="text-muted hover:text-text">
+                Performers
+              </Link>
+              <Link href="/library" className="text-muted hover:text-text">
+                Library
+              </Link>
+            </nav>
           </header>
           {children}
           {/* Reads the URL (Go to current track), so it renders on request. */}

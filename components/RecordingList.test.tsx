@@ -71,6 +71,9 @@ function renderList(
           onSelect={onSelect}
           onDelete={onDelete}
           onEdit={onEdit}
+          performers={{
+            r1: [{ name: "Seong-Jin Cho", slug: "seong-jin-cho" }],
+          }}
         />
         <Player onRequest={onRequest} />
       </PlayerSync>
@@ -153,6 +156,14 @@ describe("RecordingList", () => {
         "listitem",
       ),
     ).toHaveTextContent("Ballade No. 1");
+  });
+
+  it("links the selected recording's performers to their pages", () => {
+    renderList();
+    expect(screen.getByRole("link", { name: "Seong-Jin Cho" })).toHaveAttribute(
+      "href",
+      "/performer/seong-jin-cho",
+    );
   });
 
   it("edits a recording", () => {

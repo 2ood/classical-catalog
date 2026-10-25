@@ -98,3 +98,42 @@ export const spotifyTokens = pgTable("spotify_tokens", {
   refreshToken: text("refresh_token").notNull(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });
+
+// Performers behind recordings' performer texts; see lib/performers.ts.
+export const performers = pgTable("performers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(), // in URLs
+  kind: text("kind", { enum: ["person", "orchestra", "choir", "ensemble"] })
+    .notNull()
+    .default("person"),
+  instrument: text("instrument"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// Other names for a performer ("BPO"); `key` is the compared form, unique so
+// a name can't mean two performers.
+export const performerAliases = pgTable("performer_aliases", {
+  key: text("key").primaryKey(),
+  performerId: uuid("performer_id")
+    .notNull()
+    .references(() => performers.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+});
+
+export const recordingPerformers = pgTable(
+  "recording_performers",
+  {
+    recordingId: uuid("recording_id")
+      .notNull()
+      .references(() => recordings.id, { onDelete: "cascade" }),
+    performerId: uuid("performer_id")
+      .notNull()
+      .references(() => performers.id, { onDelete: "cascade" }),
+    // Order in the performer text.
+    position: integer("position").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.recordingId, t.performerId] })],
+);
+
+export type Performer = typeof performers.$inferSelect;

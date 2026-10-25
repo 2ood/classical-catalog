@@ -14,6 +14,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts",
     "db:schools": "tsx scripts/seed-schools.ts",
+    "db:performers": "tsx scripts/link-performers.ts",
     "postinstall": "node scripts/copy-pdfjs-assets.mjs"
   },
   "dependencies": {

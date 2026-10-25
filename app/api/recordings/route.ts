@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { parseMovementStarts } from "@/lib/movements";
+import { linkPerformers } from "@/lib/performer-store";
 import { parseRecordingInput } from "@/lib/recordings";
 import { recordings, works } from "@/lib/schema";
 
@@ -36,5 +37,6 @@ export async function POST(request: Request) {
     .insert(recordings)
     .values({ ...parsed.value, movementStarts: starts.value })
     .returning();
+  await linkPerformers(db, recording.id, recording.performer);
   return NextResponse.json(recording, { status: 201 });
 }

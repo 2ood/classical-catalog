@@ -64,6 +64,13 @@
       "when": 1792906041746,
       "tag": "0008_composer_schools",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792914880149,
+      "tag": "0009_performers",
+      "breakpoints": true
     }
   ]
 }

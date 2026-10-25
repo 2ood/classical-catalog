@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePlayerSync } from "./PlayerSync";
 import { useSpotifyPlayback } from "./SpotifyPlayback";
 import { movementLabel } from "@/lib/movements";
@@ -23,6 +24,7 @@ export default function RecordingList({
   onSelect,
   onDelete,
   onEdit,
+  performers = {},
 }: {
   recordings: Recording[];
   selectedId: string | undefined;
@@ -31,6 +33,8 @@ export default function RecordingList({
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
+  /** Each recording's performers, linked to their pages. */
+  performers?: Record<string, { name: string; slug: string }[]>;
 }) {
   return (
     <ul className="flex flex-col">
@@ -72,6 +76,21 @@ export default function RecordingList({
                 ✕
               </button>
             </div>
+            {selected && (performers[r.id] ?? []).length > 0 && (
+              <p className="pl-1 pb-1 text-xs text-muted">
+                {performers[r.id].map((p, i) => (
+                  <span key={p.slug}>
+                    {i > 0 && " · "}
+                    <Link
+                      href={`/performer/${p.slug}`}
+                      className="hover:text-text hover:underline"
+                    >
+                      {p.name}
+                    </Link>
+                  </span>
+                ))}
+              </p>
+            )}
             {selected && (
               <RecordingTracks recording={r} workTitle={workTitle} />
             )}

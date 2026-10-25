@@ -10,23 +10,29 @@ import { db } from "@/lib/db";
 import { composers, recordings, scores, works } from "@/lib/schema";
 import { imslpSearchUrl } from "@/lib/scores";
 import { movementSlugs } from "@/lib/slugs";
+import { getPerformer, getRecordingPerformers } from "@/lib/queries";
+import { orderForQueue, queueStep } from "@/lib/queue";
 import { searchQuery } from "@/lib/suggestions";
 
 type Route = "/composer/[slug]/[work]/[[...movement]]";
 
-export default function WorkPage({ params }: PageProps<Route>) {
+export default function WorkPage({ params, searchParams }: PageProps<Route>) {
   return (
     // Full viewport minus the 3rem header in the root layout.
     <main className="h-[calc(100dvh-3rem)] flex flex-col">
       <Suspense fallback={<p className="p-6 text-muted">Loading…</p>}>
-        <Player params={params} />
+        <Player params={params} searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
-async function Player({ params }: Pick<PageProps<Route>, "params">) {
+async function Player({
+  params,
+  searchParams,
+}: Pick<PageProps<Route>, "params" | "searchParams">) {
   const { slug, work: workSlug, movement = [] } = await params;
+  const { queue: queueSlug, at } = await searchParams;
 
   const [row] = await db
     .select({ work: works, composer: composers })
@@ -37,6 +43,25 @@ async function Player({ params }: Pick<PageProps<Route>, "params">) {
   const { work, composer } = row;
   const id = work.id;
   const workPath = `/composer/${composer.slug}/${work.slug}`;
+
+  // Playing through a performer's recordings (`?queue=<performer>&at=<i>`).
+  let queue = null;
+  if (typeof queueSlug === "string" && typeof at === "string") {
+    const found = await getPerformer(queueSlug);
+    const step =
+      found &&
+      queueStep(orderForQueue(found.recordings), queueSlug, at, {
+        composer: composer.slug,
+        work: work.slug,
+      });
+    if (found && step) {
+      queue = {
+        ...step,
+        performer: { name: found.performer.name, slug: queueSlug },
+        exit: workPath,
+      };
+    }
+  }
 
   // Opened at a movement, e.g. from the works list. A movement renamed or
   // moved since the link was made falls back to the work.
@@ -93,6 +118,8 @@ async function Player({ params }: Pick<PageProps<Route>, "params">) {
           workId={work.id}
           recordings={recs}
           workTitle={work.title}
+          performers={await getRecordingPerformers(work.id)}
+          queue={queue}
           query={searchQuery(composer, work)}
         />
       </div>
