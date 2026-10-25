@@ -42,12 +42,13 @@ export default function WorksList({
 }) {
   const [genre, setGenre] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [recordedOnly, setRecordedOnly] = useState(false);
   // Movements are shown unless folded away.
   const [folded, setFolded] = useState<Set<string>>(() => new Set());
   const groups = groupByGenre(works);
-  const visible = groupByGenre(works.filter((w) => matches(w, query))).filter(
-    (g) => !genre || g.genre === genre,
-  );
+  const visible = groupByGenre(
+    works.filter((w) => matches(w, query) && (!recordedOnly || w.hasRecording)),
+  ).filter((g) => !genre || g.genre === genre);
 
   const toggle = (id: string) =>
     setFolded((f) => {
@@ -58,14 +59,28 @@ export default function WorksList({
 
   return (
     <>
-      <input
-        type="search"
-        aria-label="Search works"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search works or catalogue numbers"
-        className="w-full mb-4 text-sm border border-border px-2 py-1 bg-bg focus:outline-none focus:border-text"
-      />
+      <div className="flex items-center gap-2 mb-4">
+        <input
+          type="search"
+          aria-label="Search works"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search works or catalogue numbers"
+          className="flex-1 text-sm border border-border px-2 py-1 bg-bg focus:outline-none focus:border-text"
+        />
+        <button
+          type="button"
+          aria-pressed={recordedOnly}
+          onClick={() => setRecordedOnly((r) => !r)}
+          className={`shrink-0 px-2 py-1 rounded-sm text-sm ${
+            recordedOnly
+              ? "bg-inverse-bg text-inverse-text"
+              : "bg-bg border border-border text-muted hover:text-text"
+          }`}
+        >
+          With recordings
+        </button>
+      </div>
       {groups.length > 1 && (
         <GenreFilter
           genres={groups.map((g) => g.genre)}

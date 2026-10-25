@@ -163,6 +163,21 @@ describe("WorksList", () => {
     expect(screen.getByText("No works match.")).toBeInTheDocument();
   });
 
+  it("shows only works with recordings when asked", () => {
+    render(<WorksList composerSlug="mozart" works={works} />);
+    const toggle = screen.getByRole("button", { name: "With recordings" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText(title("Symphony No. 40"))).toBeInTheDocument();
+    expect(screen.queryByText(title("Symphony No. 7"))).toBeNull();
+    expect(screen.queryByText(title("Eine kleine Nachtmusik"))).toBeNull();
+
+    fireEvent.click(toggle);
+    expect(screen.getByText(title("Symphony No. 7"))).toBeInTheDocument();
+  });
+
   it("hides the chips when there is only one genre", () => {
     render(<WorksList composerSlug="mozart" works={works.slice(0, 2)} />);
     expect(screen.queryByRole("button", { name: "All" })).toBeNull();
