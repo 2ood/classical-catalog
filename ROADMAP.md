@@ -4,18 +4,13 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 
 ## In Progress
 
-### Milestone 4: Player — recordings pane
-- [ ] `PerformerTiles` — 40px circles with initials, active state
-- [ ] Hover ✕ delete when logged in; `DELETE /api/recordings/[id]`
-- [ ] Embed fills remaining pane height; two-column layout with 1px divider
-
-## Planned
-
 ### Milestone 5: Player — score pane
 - [ ] `lib/blob.ts`; `POST /api/scores/upload`, `DELETE /api/scores/[id]`
 - [ ] `DropUpload` drag-and-drop zone (logged in only)
 - [ ] `ScoreViewer` with react-pdf, page controls pinned to bottom
 - [ ] Score selector dropdown when multiple scores; IMSLP search button
+
+## Planned
 
 ### Milestone 6: Admin
 - [ ] `POST /api/composers`, `POST /api/works`, `PATCH`/`DELETE /api/works/[id]`
@@ -28,6 +23,18 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 - [ ] `vercel --prod` and production smoke test
 
 ## Completed
+
+### Milestone 4: Player — recordings pane (completed 2026-10-25)
+- [x] `PerformerTiles` — 40px circles with initials, active state
+- [x] Hover ✕ delete when logged in; `DELETE /api/recordings/[id]`
+- [x] Embed fills remaining pane height; two-column layout with 1px divider
+- [x] "+" tile in the strip opens the add-recording form (spec Screen 3; replaces the always-visible form)
+- [x] Caption under the tiles names the active performer and year — initials alone are ambiguous (e.g. two "KB" Karajan recordings); not in the spec
+- [x] Manual verification checklist — passed
+- Decisions:
+  - Initials are the first letters of the first two words, splitting on spaces and `/`
+  - Deleting asks for confirmation in a browser dialog
+  - The header is a fixed 3rem tall so the player fills exactly the rest of the viewport; the score pane is a placeholder until Milestone 5
 
 ### Milestone 3: Works list (completed 2026-10-25)
 - [x] Catalogue-number natural sort (`K. 9` < `K. 550`, `Op. 10 No. 2`) — test-first

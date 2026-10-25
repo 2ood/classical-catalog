@@ -23,6 +23,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `GET /api/composers` returns every composer with their count of recorded works
 - Works list on `/composer/[id]`: works grouped by genre (alphabetical) and sorted naturally by catalogue number (`K. 9` before `K. 550`, `Op. 10 No. 2` before `Op. 10 No. 12`); genre filter chips; a dot marks works with recordings and works without are faded; header with back arrow, serif name, era label, and an "Edit" link when logged in
 - `GET /api/works?composer_id=` returns a composer's works with a has-recording flag (400 for a malformed id)
+- Player page (`/work/[id]`) fills the viewport: score pane (placeholder) and recordings pane side by side with a 1px divider; the embed fills the rest of its pane
+- Performer tiles: 40px circles with the performer's initials, active tile in black, a caption naming the active performer and year; when logged in, a ✕ on hover deletes a recording (after confirmation) and a "+" tile opens the add-recording form
+- `DELETE /api/recordings/[id]` (login required; 400 for a malformed id, 404 if not found)
+
+### Changed
+- The add-recording form is no longer always visible; it opens from the "+" tile
+- The site header is a fixed 48px tall
 
 ### Fixed
 - Component tests no longer see leftover output from earlier tests (Testing Library cleanup now runs after each test)
