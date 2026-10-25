@@ -2,9 +2,10 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import ComposerSchools from "@/components/ComposerSchools";
 import WorksList from "@/components/WorksList";
 import { db } from "@/lib/db";
-import { getWorksForComposer } from "@/lib/queries";
+import { getSchools, getWorksForComposer } from "@/lib/queries";
 import { composers } from "@/lib/schema";
 
 export default function ComposerPage({
@@ -30,7 +31,10 @@ async function Works({
     .where(eq(composers.slug, slug));
   if (!composer) notFound();
 
-  const works = await getWorksForComposer(composer.id);
+  const [works, schools] = await Promise.all([
+    getWorksForComposer(composer.id),
+    getSchools(composer.id),
+  ]);
 
   return (
     <>
@@ -47,6 +51,7 @@ async function Works({
           <span className="text-xs text-muted">{composer.era}</span>
         )}
       </header>
+      <ComposerSchools composerId={composer.id} schools={schools} />
       {works.length === 0 ? (
         <p className="text-muted">No works yet.</p>
       ) : (

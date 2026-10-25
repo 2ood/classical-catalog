@@ -2,14 +2,10 @@ import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import { matchComposer, planImport } from "./import";
-import {
-  fetchArtistWorks,
-  findArtist,
-  matchMovements,
-  parentsFrom,
-} from "./musicbrainz";
+import { fetchArtistWorks, matchMovements, parentsFrom } from "./musicbrainz";
 import type { fetchComposerWorks, OpenOpusComposer } from "./openopus";
-import { composers, works } from "./schema";
+import { seedSchools } from "./school-store";
+import { composerSchools, composers, works } from "./schema";
 import { slugify, uniqueSlug } from "./slugs";
 
 /** "brahms"; the full name when another composer has that short name. */
@@ -21,18 +17,39 @@ function composerSlug(composer: OpenOpusComposer, taken: Set<string>) {
 
 const noMovements = sql`${works.movements} = '[]'::jsonb`;
 
+/** See lib/school-store.ts. */
+export function importSchools(
+  composerId: string,
+  completeName: string,
+  artistId: string | null,
+) {
+  return seedSchools(db, composerId, completeName, artistId);
+}
+
+/** Replaces a composer's schools (the composer page's editor). */
+export function saveSchools(composerId: string, names: string[]) {
+  return db.transaction(async (tx) => {
+    await tx
+      .delete(composerSchools)
+      .where(eq(composerSchools.composerId, composerId));
+    if (names.length > 0) {
+      await tx
+        .insert(composerSchools)
+        .values(names.map((name) => ({ composerId, name })));
+    }
+  });
+}
+
 /**
- * Fills in movement lists from MusicBrainz for the composer's works that
- * have none yet (lists entered by hand are never replaced). Returns how
- * many works got movements, or null when MusicBrainz has no such composer.
+ * Fills in movement lists from MusicBrainz (artist `artistId`) for the
+ * composer's works that have none yet (lists entered by hand are never
+ * replaced). Returns how many works got movements.
  */
 export async function importMovements(
-  composer: OpenOpusComposer,
+  artistId: string,
   composerId: string,
   onPage: (done: number, total: number) => void,
-): Promise<number | null> {
-  const artistId = await findArtist(composer.completeName, composer.born);
-  if (!artistId) return null;
+): Promise<number> {
   const parents = parentsFrom(await fetchArtistWorks(artistId, onPage));
 
   const bare = await db

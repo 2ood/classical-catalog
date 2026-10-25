@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { importComposer, importMovements } from "@/lib/import-store";
+import {
+  importComposer,
+  importMovements,
+  importSchools,
+} from "@/lib/import-store";
+import { findArtist } from "@/lib/musicbrainz";
 import { fetchComposerWorks } from "@/lib/openopus";
 
 /**
@@ -38,16 +43,30 @@ export async function POST(request: Request) {
         } catch {}
       };
       send({ type: "imported", ...imported });
+      const { composer } = fetched;
+      let artistId: string | null = null;
+      let outcome: object;
       try {
-        const movements = await importMovements(
-          fetched.composer,
-          imported.composerId,
-          (done, total) => send({ type: "progress", done, total }),
-        );
-        send({ type: "done", ...imported, movements });
+        artistId = await findArtist(composer.completeName, composer.born);
+        // null: MusicBrainz has no such composer.
+        const movements = artistId
+          ? await importMovements(
+              artistId,
+              imported.composerId,
+              (done, total) => send({ type: "progress", done, total }),
+            )
+          : null;
+        outcome = { type: "done", ...imported, movements };
       } catch (error) {
-        send({ type: "error", error: (error as Error).message });
+        outcome = { type: "error", error: (error as Error).message };
       }
+      // Built-in schools even when MusicBrainz failed; Wikidata's when found.
+      await importSchools(
+        imported.composerId,
+        composer.completeName,
+        artistId,
+      ).catch(() => 0);
+      send(outcome);
       try {
         controller.close();
       } catch {}

@@ -3,6 +3,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -19,8 +20,21 @@ export const composers = pgTable("composers", {
   died: integer("died"),
   era: text("era"),
   openOpusId: integer("open_opus_id").unique(),
+  wikidataId: text("wikidata_id"), // e.g. "Q4700"
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
+
+// A composer's schools / movements (Impressionism, The Five, …).
+export const composerSchools = pgTable(
+  "composer_schools",
+  {
+    composerId: uuid("composer_id")
+      .notNull()
+      .references(() => composers.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.composerId, t.name] })],
+);
 
 export const works = pgTable(
   "works",

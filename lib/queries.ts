@@ -1,9 +1,12 @@
 import "server-only";
 import { asc, count, countDistinct, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "./db";
-import { composers, recordings, works } from "./schema";
+import { composerSchools, composers, recordings, works } from "./schema";
 
-/** All composers with the number of their works that have ≥1 recording. */
+/**
+ * All composers with the number of their works that have ≥1 recording,
+ * their years and their schools (movements).
+ */
 export function getComposersWithCounts() {
   return db
     .select({
@@ -11,8 +14,14 @@ export function getComposersWithCounts() {
       name: composers.name,
       shortName: composers.shortName,
       slug: composers.slug,
+      openOpusId: composers.openOpusId,
       era: composers.era,
+      born: composers.born,
+      died: composers.died,
       recordedWorks: countDistinct(recordings.workId),
+      schools: sql<string[]>`coalesce((
+        select array_agg(s.name order by s.name) from ${composerSchools} s
+        where s.composer_id = ${composers.id}), '{}')`,
     })
     .from(composers)
     .leftJoin(works, eq(works.composerId, composers.id))
@@ -60,4 +69,14 @@ export function getImportedComposers() {
     .leftJoin(works, eq(works.composerId, composers.id))
     .where(isNotNull(composers.openOpusId))
     .groupBy(composers.id);
+}
+
+/** A composer's schools (movements), alphabetically. */
+export async function getSchools(composerId: string): Promise<string[]> {
+  const rows = await db
+    .select({ name: composerSchools.name })
+    .from(composerSchools)
+    .where(eq(composerSchools.composerId, composerId))
+    .orderBy(asc(composerSchools.name));
+  return rows.map((r) => r.name);
 }

@@ -57,6 +57,13 @@
       "when": 1792899434205,
       "tag": "0007_slugs",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792906041746,
+      "tag": "0008_composer_schools",
+      "breakpoints": true
     }
   ]
 }

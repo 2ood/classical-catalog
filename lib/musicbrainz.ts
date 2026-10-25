@@ -90,6 +90,18 @@ type MbArtist = {
   "life-span"?: { begin?: string };
 };
 
+/** The artist's Wikidata item ("Q4700"), from their MusicBrainz links. */
+export async function wikidataIdOf(
+  artistId: string,
+  wait: (ms: number) => Promise<void> = sleep,
+): Promise<string | null> {
+  const body = await get<{
+    relations?: { type: string; url?: { resource: string } }[];
+  }>(`/artist/${artistId}?inc=url-rels&fmt=json`, wait);
+  const link = body.relations?.find((r) => r.type === "wikidata");
+  return link?.url?.resource.match(/Q\d+$/)?.[0] ?? null;
+}
+
 /**
  * Every work linked to the artist, with its part links, one page per
  * second; `onPage(done, total)` reports progress in pages.
