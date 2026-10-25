@@ -29,6 +29,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Score pane on the player: PDF viewer (react-pdf) fitted to the pane height with ← page / total → controls; dropdown to switch between several scores; IMSLP button (Google search limited to imslp.org); when logged in, a drag-and-drop upload zone and header "Upload" / "Remove" buttons
 - Score uploads go from the browser straight to Vercel Blob (PDF only, up to 100MB) via `POST /api/scores/upload` tokens, then `POST /api/scores` saves the record; `DELETE /api/scores/[id]` removes the record and the file
 - PDF.js decoder assets are copied to `public/pdfjs` on `npm install` and served by the app
+- Movement navigation in the score viewer: « / » jump to the previous / next movement (« first returns to the start of the current one) and a dropdown names the current movement, e.g. "II. Andante con moto"
+- Movement editor per score: enter each movement's name (usually its tempo) and start page, with "Add at page N" for the page on screen; movements are numbered automatically in page order and saved with `PUT /api/scores/[id]/movements`
 
 ### Changed
 - The app is now local-only: Postgres 17 runs in Docker Compose (`npm run db:up`), PDF scores are stored on local disk (`SCORES_DIR`, default `storage/scores`), and `npm run dev` / `npm start` listen on 127.0.0.1 only

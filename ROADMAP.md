@@ -6,13 +6,27 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 
 ## Planned
 
-### Milestone 7: Admin
+### Milestone 8: Admin
 - [ ] `POST /api/composers`, `POST /api/works`, `PATCH`/`DELETE /api/works/[id]`
 - [ ] `/admin` composer dashboard
 - [ ] `/admin/composer/[id]` — edit composer, add/remove works
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
 
 ## Completed
+
+### Milestone 7: Movement navigation (completed 2026-10-25)
+Turn the score by musical movement, not just by page.
+- [x] `lib/movements.ts` — validate a movement list; current movement for a page; previous/next movement targets — test-first
+- [x] `scores.movements` (jsonb list of `{ name, page }`, per score) + migration; `PUT /api/scores/[id]/movements` — test-first
+- [x] `MovementNav` in the viewer bar: « / » previous / next movement, dropdown naming the current movement — test-first
+- [x] `MovementEditor`: rows of name (tempo) + start page, "Add at current page", save — test-first
+- [x] Manual verification checklist — passed
+- Decisions:
+  - Movements are stored per score (a full score and a piano reduction start movements on different pages), as a jsonb list sorted by start page
+  - « behaves like a music player's back button: start of the current movement first, then the previous movement
+  - Jumps are clamped to the PDF's page count, so a mistyped start page can't break the viewer
+  - Saving replaces the whole list (`PUT`); there is no per-movement endpoint
+  - Only the name is entered (usually the tempo, e.g. "Allegro con brio"); Roman numerals come from page order, shown as "II. Andante con moto"; new rows are inserted in page order
 
 ### Milestone 6: Local-only pivot (completed 2026-10-25)
 Storing PDF scores in a hosted service is the wrong fit; the app now runs only on the owner's machine, using local disk and a local Postgres.
