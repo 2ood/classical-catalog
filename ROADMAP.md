@@ -8,14 +8,6 @@ _Nothing in progress._
 
 ## Planned
 
-### Milestone 12: Composer map views
-The home page gets a view switch (kept in the URL, e.g. `/?view=timeline`): the current cloud, a timeline, and clusters.
-- [ ] Timeline: lifespan bars on a year axis, packed into rows so contemporaries line up; zoom to an era; names link to the composer — layout test-first (no overlapping bars)
-- [ ] Clusters by period: one small cloud per Open Opus era (Medieval → 21st Century), in chronological order
-- [ ] Clusters by movement: composers can carry movement tags (Impressionism, Second Viennese School, The Five, Les Six, Nationalism, Minimalism, …); seeded from Wikidata's "movement" (P135) where it is more specific than the period, plus a small built-in list of well-known schools; editable per composer. A composer in several movements appears in each; untagged composers fall under their period
-- [ ] Schema: `composers.wikidata_id`, birth/death years kept from Open Opus, `composer_movements` (tags); migration
-- [ ] Manual verification checklist
-
 ### Milestone 13: Performers and playlists
 Browse by performer and play through their recordings like a playlist.
 - [ ] Schema: `performers` (name, kind: conductor / orchestra / ensemble / soloist + instrument / singer) and `recording_performers` (recording ↔ performer, role); migration that splits existing text such as "Karajan / BPO" into performers — test-first on the parsing
@@ -31,7 +23,47 @@ Browse by performer and play through their recordings like a playlist.
 - [ ] `/admin/composer/[id]` — edit composer, add/remove works; bring back the composer page "Edit" link
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
 
+### Milestone 15: Spotify player
+A nicer player that follows you around the app (owner's notes 2026-10-25, items 2, 3, 8).
+- [ ] Player redesign: album cover, track and performers, Play / Pause, previous / next track, repeat this track, like on Spotify; drop "Play this recording from the start". Liking needs Spotify's library permission, so Spotify is connected once more
+- [ ] Floating mini player fixed bottom-right on every page while Spotify plays, with "Go to current track": the playing track is looked up among recordings' movement tracks (or album) and opens that work at that movement
+- [ ] Suggested recordings: "Listen" plays the album's first track (the work's first movement when it lines up) in the player instead of opening spotify.com
+- [ ] Manual verification checklist
+
+### Milestone 16: Adding recordings, better
+Adding a Spotify recording of a work with movements shouldn't mean pasting every movement's track afterwards (items 4, 5).
+- [ ] Pasting a Spotify album (or track) link shows the album's tracks matched to the work's movements right away, with performers and year read from Spotify; each match can be changed or cleared before saving — reuses Milestone 11's matching, test-first
+- [ ] One form for both cases: a whole-work link (album) fills every movement; a single track fits a one-movement work
+- [ ] Manual verification checklist
+
+### Milestone 17: Library touches
+Small things for living with a full library (items 1, 6, 7).
+- [ ] Works list toggle "With recordings": only works that have at least one recording
+- [ ] Like (♥) per movement, and a page listing liked movements (by composer, each opening the player there); schema for likes
+- [ ] Score PDFs stored by slug: `storage/scores/<composer>/<work>/<label>.pdf`; existing files moved by a script; names stay limited to slug characters so a stored name can't point outside `SCORES_DIR`
+- [ ] Manual verification checklist
+
 ## Completed
+
+### Milestone 12: Composer map views (completed 2026-10-25)
+The home page gets a view switch (kept in the URL, e.g. `/?view=timeline`): the current cloud, a timeline, and clusters.
+- [x] View switch on the home page: Cloud · Timeline · Periods · Movements, as `?view=` links
+- [x] Timeline (`lib/timeline.ts`): lifespan bars on a year axis with the name at the start, packed into rows so contemporaries line up; era chips zoom to an era (`&era=`); names link to the composer — layout test-first (no overlapping bars or labels)
+- [x] Clusters by period (`lib/clusters.ts`): one small cloud per era (Medieval → 21st Century, eras typed by hand next, composers without an era last) — grouping test-first
+- [x] Clusters by movement: a composer in several movements appears in each; untagged composers fall under their period; groups run by their members' average birth year — grouping test-first
+- [x] Movement tags (`lib/schools.ts`, `lib/wikidata.ts`, `lib/school-store.ts`) seeded on import / Update when a composer has none: Wikidata's "movement" (P135, reached through MusicBrainz' Wikidata link) where it is more specific than the period, plus a built-in list of well-known schools — label cleaning and school list test-first
+- [x] `npm run db:schools` seeds composers imported before tags existed (skips those that have some)
+- [x] Tags editable on the composer page (remove with ×, type one in); `PUT /api/composers/[id]/schools` — test-first
+- [x] Schema: `composers.wikidata_id`, `composer_schools` (composer, name); migration 0008 (additive, applied). Birth/death years already came from Open Opus
+- [x] The same views on the Library page (List · Timeline · Periods · Movements, `/library?view=`), over every Open Opus composer: imported ones open their page; the rest are faded and open the list filtered to them (`/library?q=`), next to their Import button; not-yet-imported composers carry their built-in schools (`lib/library.ts`) — test-first
+- [x] Manual verification checklist — passed
+- Decisions:
+  - Probed before planning: MusicBrainz links Rachmaninoff to Wikidata Q131861; P135 is sparse and often just the period (Chopin → Romantic music, Bach → Baroque music) but sometimes specific (Debussy → impressionism in music, Symbolism), so the built-in school list carries most of the tags
+  - Tags are "schools" in code and the database (`composer_schools`), shown as "movements": a work's movements already have that name in the code
+  - Built-in schools: Notre-Dame School, Ars Nova, Franco-Flemish School, Mannheim School, First Viennese School, New German School, The Five, Nationalism, Impressionism, Second Viennese School, Les Six, Neoclassicism, Darmstadt School, Minimalism — members matched by full name
+  - Seeding never touches a composer who already has tags, so removing one by hand sticks through later Updates
+  - The timeline is laid out at 960px like the cloud and drawn in percentages; names are estimated at 7.5px per character for packing. Living composers' bars are grey
+  - View and era live in the URL (`/?view=timeline&era=Baroque`); the cloud stays the default view and stays vertically centred
 
 ### Milestone 11: Suggested recordings + works search (completed 2026-10-25)
 Finding recordings stays the owner's exploration; a work without recordings suggests a few to start from instead of pre-populating them.

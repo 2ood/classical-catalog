@@ -48,6 +48,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Search in a composer's works list, by title or catalogue number (accents, case and spacing ignored: `k550` finds `K. 550`), working together with the genre chips
 - Suggested recordings: a work without recordings shows up to 5 Spotify albums of it (performers and year, albums naming the work first) with "Listen ↗" and "Add"; "Add" saves the album as a Spotify recording and, when the album's tracks for the work line up with its movements, sets each movement's track. "Connect Spotify" appears when not connected, and a "Find on YouTube ↗" search link always
 - `GET` / `POST /api/spotify/suggestions` (search a work's albums; save one as a recording)
+- Composer map views on the home page and the Library, switched with Cloud (List in the Library) · Timeline · Periods · Movements and kept in the URL (`?view=`): a timeline of lifespans with contemporaries stacked and era chips to zoom in; one small cloud per period; one per movement, where a composer in several movements appears in each and untagged composers stay under their period
+- In the Library's map views, every Open Opus composer appears: imported ones link to their page, the rest are faded and open the list filtered to them, next to their Import button
+- Composer movements (schools): seeded on import / Update for composers without any, from a built-in list of well-known schools (The Five, Les Six, Second Viennese School, Impressionism, Minimalism, …) and Wikidata's "movement" when it is more specific than the period; shown and editable as chips on the composer page (`PUT /api/composers/[id]/schools`)
+- `npm run db:schools` gives composers imported before movements existed their built-in and Wikidata movements
 
 ### Changed
 - Movements now belong to the work: names and order are shared by all its scores and recordings, which each store their own start pages, times or tracks; existing per-score movements were migrated to their works
