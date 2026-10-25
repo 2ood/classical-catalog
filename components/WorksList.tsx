@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import GenreFilter from "./GenreFilter";
+import { plain } from "@/lib/import";
 import { movementLabel, type WorkMovement } from "@/lib/movements";
 import { movementSlug } from "@/lib/slugs";
+import { normalizeCatalogue } from "@/lib/work-titles";
 import { groupByGenre } from "@/lib/works";
 
 export type ListedWork = {
@@ -20,6 +22,17 @@ export type ListedWork = {
   recordedMovements: string[];
 };
 
+/** Title or catalogue number, ignoring accents, case and spacing ("k550"). */
+function matches(work: ListedWork, query: string): boolean {
+  const q = plain(query);
+  if (!q) return true;
+  return (
+    plain(`${work.catalogueNum ?? ""} ${work.title}`).includes(q) ||
+    (!!work.catalogueNum &&
+      normalizeCatalogue(work.catalogueNum).includes(normalizeCatalogue(query)))
+  );
+}
+
 export default function WorksList({
   composerSlug,
   works,
@@ -28,10 +41,13 @@ export default function WorksList({
   works: ListedWork[];
 }) {
   const [genre, setGenre] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   // Movements are shown unless folded away.
   const [folded, setFolded] = useState<Set<string>>(() => new Set());
   const groups = groupByGenre(works);
-  const visible = genre ? groups.filter((g) => g.genre === genre) : groups;
+  const visible = groupByGenre(works.filter((w) => matches(w, query))).filter(
+    (g) => !genre || g.genre === genre,
+  );
 
   const toggle = (id: string) =>
     setFolded((f) => {
@@ -42,6 +58,14 @@ export default function WorksList({
 
   return (
     <>
+      <input
+        type="search"
+        aria-label="Search works"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search works or catalogue numbers"
+        className="w-full mb-4 text-sm border border-border px-2 py-1 bg-bg focus:outline-none focus:border-text"
+      />
       {groups.length > 1 && (
         <GenreFilter
           genres={groups.map((g) => g.genre)}
@@ -49,6 +73,7 @@ export default function WorksList({
           onSelect={setGenre}
         />
       )}
+      {visible.length === 0 && <p className="text-muted">No works match.</p>}
       {visible.map((group) => (
         <section key={group.genre} className="mb-6">
           <h2 className="text-xs uppercase text-muted border-t border-border pt-2 mb-1">

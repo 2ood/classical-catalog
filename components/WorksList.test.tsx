@@ -144,6 +144,25 @@ describe("WorksList", () => {
     ).toBeNull();
   });
 
+  it("searches works by title or catalogue number", () => {
+    render(<WorksList composerSlug="mozart" works={works} />);
+    const search = screen.getByRole("searchbox", { name: "Search works" });
+
+    fireEvent.change(search, { target: { value: "nachtmusik" } });
+    expect(
+      screen.getByText(title("Eine kleine Nachtmusik")),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(title("Symphony No. 40"))).toBeNull();
+
+    // Catalogue numbers match however they are spaced or dotted.
+    fireEvent.change(search, { target: { value: "k550" } });
+    expect(screen.getByText(title("Symphony No. 40"))).toBeInTheDocument();
+    expect(screen.queryByText(title("Symphony No. 7"))).toBeNull();
+
+    fireEvent.change(search, { target: { value: "requiem" } });
+    expect(screen.getByText("No works match.")).toBeInTheDocument();
+  });
+
   it("hides the chips when there is only one genre", () => {
     render(<WorksList composerSlug="mozart" works={works.slice(0, 2)} />);
     expect(screen.queryByRole("button", { name: "All" })).toBeNull();
