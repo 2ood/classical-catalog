@@ -4,12 +4,6 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 
 ## In Progress
 
-### Milestone 5: Player — score pane
-- [ ] `lib/blob.ts`; `POST /api/scores/upload`, `DELETE /api/scores/[id]`
-- [ ] `DropUpload` drag-and-drop zone (logged in only)
-- [ ] `ScoreViewer` with react-pdf, page controls pinned to bottom
-- [ ] Score selector dropdown when multiple scores; IMSLP search button
-
 ## Planned
 
 ### Milestone 6: Admin
@@ -23,6 +17,23 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 - [ ] `vercel --prod` and production smoke test
 
 ## Completed
+
+### Milestone 5: Player — score pane (completed 2026-10-25, on Vercel Blob)
+- [x] `lib/blob.ts`; `POST /api/scores/upload`, `DELETE /api/scores/[id]`
+- [x] `DropUpload` drag-and-drop zone (logged in only)
+- [x] `ScoreViewer` with react-pdf, page controls pinned to bottom
+- [x] Score selector dropdown when multiple scores; IMSLP search button
+- [x] `POST /api/scores` saves the score record after the browser finishes uploading (not in the spec's route list)
+- [x] "Upload" and "Remove" in the score pane header when logged in and a score exists — adding a second score or removing a wrong one shouldn't wait for Milestone 6
+- [x] Manual verification — upload and page rendering passed; second score, Remove and non-PDF rejection not checked before the local-only pivot
+- Decisions:
+  - Uploads go browser → Blob directly (`@vercel/blob/client`); `/api/scores/upload` only issues tokens (PDF only, ≤100MB). Vercel functions cap request bodies at ~4.5MB, too small for many scores
+  - No `onUploadCompleted` webhook: Vercel can't reach localhost, and `proxy.ts` would reject it without a session
+  - Blob store is public; deleting a score removes the record first, then the file (a failed file delete is only logged)
+  - The PDF page is fitted to the pane height; text and annotation layers are off
+  - PDF.js decoder assets (JBIG2/JPEG 2000 wasm, cMaps, standard fonts, ICC profiles) are copied to `public/pdfjs` on postinstall and self-hosted; without the wasm, scanned (JBIG2) scores rendered as blank pages
+  - The IMSLP button runs a Google search restricted to imslp.org ("site:imslp.org Op. 67 Symphony No. 5, C minor Ludwig van Beethoven"); IMSLP's own search page was broken
+  - Default score label comes from the file name
 
 ### Milestone 4: Player — recordings pane (completed 2026-10-25)
 - [x] `PerformerTiles` — 40px circles with initials, active state

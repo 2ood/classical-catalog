@@ -26,10 +26,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Player page (`/work/[id]`) fills the viewport: score pane (placeholder) and recordings pane side by side with a 1px divider; the embed fills the rest of its pane
 - Performer tiles: 40px circles with the performer's initials, active tile in black, a caption naming the active performer and year; when logged in, a ✕ on hover deletes a recording (after confirmation) and a "+" tile opens the add-recording form
 - `DELETE /api/recordings/[id]` (login required; 400 for a malformed id, 404 if not found)
+- Score pane on the player: PDF viewer (react-pdf) fitted to the pane height with ← page / total → controls; dropdown to switch between several scores; IMSLP button (Google search limited to imslp.org); when logged in, a drag-and-drop upload zone and header "Upload" / "Remove" buttons
+- Score uploads go from the browser straight to Vercel Blob (PDF only, up to 100MB) via `POST /api/scores/upload` tokens, then `POST /api/scores` saves the record; `DELETE /api/scores/[id]` removes the record and the file
+- PDF.js decoder assets are copied to `public/pdfjs` on `npm install` and served by the app
 
 ### Changed
 - The add-recording form is no longer always visible; it opens from the "+" tile
 - The site header is a fixed 48px tall
 
 ### Fixed
+- Scanned scores (JBIG2 images) no longer render as blank pages
 - Component tests no longer see leftover output from earlier tests (Testing Library cleanup now runs after each test)
