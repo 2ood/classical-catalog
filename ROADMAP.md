@@ -4,15 +4,33 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 
 ## In Progress
 
+_Nothing in progress._
+
 ## Planned
 
-### Milestone 9: Admin
+### Milestone 10: Admin
 - [ ] `POST /api/composers`, `POST /api/works`, `PATCH`/`DELETE /api/works/[id]`
 - [ ] `/admin` composer dashboard
 - [ ] `/admin/composer/[id]` — edit composer, add/remove works
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
 
 ## Completed
+
+### Milestone 9: Spotify Connect (completed 2026-10-25)
+Control the owner's Spotify app (Premium) instead of the embed, and sync both ways by movement.
+- [x] Spotify developer app (owner, Premium); `SPOTIFY_CLIENT_ID` in `.env`; redirect URI `http://127.0.0.1:3000/api/spotify/callback`
+- [x] `lib/spotify.ts`: PKCE verifier/challenge, authorize URL, link → `spotify:` URI, track → movement — test-first
+- [x] Tokens in a one-row `spotify_tokens` table; client refreshes the access token before it expires — test-first
+- [x] Routes: `/api/spotify/login`, `/callback`, `/status`, `/playback`, `/play`, `/pause`, `/disconnect` — test-first where they can be
+- [x] `SpotifyConnectPlayer`: now playing + device, Play / Pause; embed + "Connect Spotify" when not connected
+- [x] Sync: a chosen movement plays its track (within the track's own album); polling every 2s turns the score when the track changes movement
+- [x] Manual verification checklist — passed with the owner's Spotify login
+- Decisions:
+  - Spotify Connect (control the owner's Spotify app), not the in-browser Web Playback SDK; Premium is required by Spotify for both, and since February 2026 for any Development Mode app
+  - PKCE login with only a client ID; tokens stay server-side in `spotify_tokens` and every Spotify call goes through our routes
+  - The login starts on the redirect URI's host (127.0.0.1), judged by the Host header, so a localhost visit still completes
+  - A movement's track plays inside its own album (looked up with `GET /tracks/{id}`), with the track as offset, so later movements follow on; the recording's album can be a different release that lacks the track (found with the Karajan cycle, whose movement links came from a single-symphony album). Falls back to playing just the track
+  - Playback is polled every 2s while the tab is visible; `/api/spotify/status` and `/playback` call `connection()` so they are never prerendered at build time
 
 ### Milestone 8: Recording sync by movement (completed 2026-10-25)
 Movements belong to the work; scores mark start pages, recordings mark start times (YouTube) or tracks (Spotify).

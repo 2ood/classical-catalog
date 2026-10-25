@@ -10,7 +10,7 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 - Works list — grouped by genre, sorted by catalogue number, genre filter chips
 - Player page — PDF score viewer (upload, or search IMSLP) beside a YouTube/Spotify embed
 - Per-work performer tiles to switch between recordings
-- Movements: jump through the score by movement; a YouTube recording seeks to the chosen movement and turns the score as it plays; a Spotify recording loads each movement's track
+- Movements: jump through the score by movement; a YouTube recording seeks to the chosen movement and turns the score as it plays; a Spotify recording loads each movement's track — or, with Spotify Connect, plays it in your Spotify app and turns the score as tracks change
 - PDF scores stored on local disk, served by the app
 - Admin pages for managing composers, works, recordings and scores (planned)
 
@@ -50,9 +50,21 @@ For everyday use, `npm run build && npm start` serves the optimized build on the
 ```
 DATABASE_URL=postgres://classical:classical@127.0.0.1:5432/classical
 SCORES_DIR=              # optional; where PDFs are stored (default storage/scores)
+SPOTIFY_CLIENT_ID=       # optional; see Spotify Connect below
 ```
 
 Postgres data lives in the `pgdata` Docker volume; PDFs live in `SCORES_DIR`. Back up both to keep the library.
+
+### Spotify Connect (optional)
+
+Spotify recordings can play in your own Spotify app (desktop or phone) instead of the embedded player, with the score following each movement's track. This needs Spotify Premium.
+
+1. Create an app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) — APIs used: **Web API**.
+2. Add the redirect URI `http://127.0.0.1:3000/api/spotify/callback` (Spotify does not accept `localhost`).
+3. Put the app's client ID in `.env` as `SPOTIFY_CLIENT_ID` and restart the server.
+4. Open the app at **http://127.0.0.1:3000**, go to a Spotify recording and click **Connect Spotify**.
+
+The login is stored in the local database; **Disconnect** forgets it.
 
 ### Scripts
 

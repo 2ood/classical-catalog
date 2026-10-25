@@ -34,6 +34,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Recording sync by movement: choosing a movement in the score seeks the YouTube video to its start or loads the movement's Spotify track; a playing YouTube video turns the score to each new movement's start page
 - Recording movement editor: start time per movement for YouTube (m:ss, with a "Now" button and "Add at m:ss"), or a track link per movement for Spotify
 - `PUT /api/recordings/[id]/movements`
+- Spotify Connect (optional, needs Spotify Premium and a Spotify developer app): log in once with "Connect Spotify"; Spotify recordings then play in your own Spotify app, with what is playing, the device, Play / Pause and Disconnect shown in the recordings pane
+- With Spotify Connect, choosing a movement in the score plays that movement's track (inside the track's own album, so later movements follow), and the score turns to a movement when Spotify starts its track
+- `SPOTIFY_CLIENT_ID` / `SPOTIFY_REDIRECT_URI` settings and the `/api/spotify/*` routes; the login is kept in the local database
 
 ### Changed
 - Movements now belong to the work: names and order are shared by all its scores and recordings, which each store their own start pages, times or tracks; existing per-score movements were migrated to their works
