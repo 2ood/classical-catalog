@@ -65,6 +65,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `/performers` (people grouped by instrument or role from a fixed list, then orchestras, choirs, ensembles) and `/performer/<name>` (their recordings by composer); a "Performers" link in the header; a recording's performers link to their pages from the recordings list
 - On a performer page: rename (the old name stays another name for them), set kind and instrument or role, and merge with another performer ("BPO" into "Berliner Philharmoniker"); `PATCH /api/performers/[id]`, `POST /api/performers/[id]/merge`
 - Play-through: "▶ Play all" on a performer page plays their recordings one after another — each work opens with that recording playing (Spotify Connect, YouTube autoplay) and moves on when it ends; a queue bar shows the position, ⏮ ⏭ between works, ✕ to stop, and the whole queue with the current work highlighted
+- A "With recordings" toggle on the works list, alongside search and the genre chips
+- Likes (★) for a recording's movements — or its piece, for a work without movements — on the track rows; `/liked` lists them by composer with the performer at the right, each opening the player at that movement with that recording; "Liked" in the header; `PUT /api/likes`
+- Score PDFs are filed as `storage/scores/<composer>/<work>/<label>.pdf` (file names capped at 40 characters, numbered when taken); `npm run db:scores` moves scores stored under the old generated names, which keep working until then
 
 ### Changed
 - Movements now belong to the work: names and order are shared by all its scores and recordings, which each store their own start pages, times or tracks; existing per-score movements were migrated to their works

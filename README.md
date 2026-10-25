@@ -12,14 +12,15 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 - Works list — grouped by genre, sorted by catalogue number, genre filter chips; each work's movements listed under it, opening the player at that movement
 - Suggested recordings — a work without recordings suggests Spotify albums of it; plus a YouTube search link
 - Adding a Spotify recording matches the album's tracks to the work's movements as you paste the link, to check and adjust before saving
-- Search within a composer's works by title or catalogue number
+- Search within a composer's works by title or catalogue number, or show only works with recordings
+- Likes (★) for a recording's movements, listed on a Liked page
 - Readable addresses, e.g. `/composer/brahms/klavierstucke-op-118/ii-intermezzo-in-a-dur-andante-teneramente`
 - Player page — PDF score viewer (upload, or search IMSLP) beside a YouTube/Spotify embed
 - Recordings as a track list — each movement (or the piece) with its own play button, the one playing in Spotify green; edit or delete a recording; a movement control beside the work's title moves score and recording together
 - Performers — recordings linked to performers (orchestras, choirs, people by instrument), with pages, renaming and merging; "Play all" plays a performer's recordings one after another
 - A floating mini player on every page while Spotify plays (previous / next, repeat, like, "Go to current track")
 - Movements: jump through the score by movement; a YouTube recording seeks to the chosen movement and turns the score as it plays; a Spotify recording loads each movement's track — or, with Spotify Connect, plays it in your Spotify app and turns the score as tracks change
-- PDF scores stored on local disk, served by the app
+- PDF scores stored on local disk by composer and work (`storage/scores/<composer>/<work>/<label>.pdf`), served by the app
 - Admin pages for managing composers, works, recordings and scores (planned)
 
 ## Tech Stack
@@ -88,12 +89,13 @@ npm run db:up        # start Postgres (docker compose up -d)
 npm run db:generate  # generate a migration after editing lib/schema.ts
 npm run db:schools   # give composers without movements their built-in / Wikidata ones
 npm run db:performers # link recordings made before performers to their performers
+npm run db:scores    # move scores stored under old generated names into composer/work folders
 ```
 
 ## Project Structure
 
 ```
-app/                routes: /, /library, /performers, /performer/[slug], /composer/[slug], /composer/[slug]/[work]/[[...movement]], /api/*
+app/                routes: /, /library, /liked, /performers, /performer/[slug], /composer/[slug], /composer/[slug]/[work]/[[...movement]], /api/*
 components/         UI components (ComposerCloud, WorksList, LibraryBrowser, ScoreViewer, RecordingPlayer, ...)
 lib/                db client, Drizzle schema, Open Opus / MusicBrainz clients, title parsing, import, slugs, local score storage
 scripts/            seed and PDF.js asset copy scripts

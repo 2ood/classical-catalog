@@ -21,14 +21,19 @@ YouTube stops when you leave the work page, because its video lives in that page
 - [ ] Play-through loads the next video into the same player (no new player per work, so no autoplay blocking)
 - [ ] Manual verification checklist
 
-### Milestone 17: Library touches
-Small things for living with a full library (items 1, 6, 7).
-- [ ] Works list toggle "With recordings": only works that have at least one recording
-- [ ] Like (♥) per movement, and a page listing liked movements (by composer, each opening the player there); schema for likes
-- [ ] Score PDFs stored by slug: `storage/scores/<composer>/<work>/<label>.pdf`; existing files moved by a script; names stay limited to slug characters so a stored name can't point outside `SCORES_DIR`
-- [ ] Manual verification checklist
-
 ## Completed
+
+### Milestone 17: Library touches (completed 2026-10-25)
+Small things for living with a full library (owner's notes 2026-10-25, items 1, 6, 7).
+- [x] Works list toggle "With recordings": only works that have at least one recording, together with search and genre chips — test-first
+- [x] Like (★) per movement of a recording (a single piece: the recording's piece) on the track rows; `liked_tracks` (recording, movement), migrations 0010–0012; `PUT /api/likes` — test-first
+- [x] `/liked`: liked movements by composer, the performer at the right end, each opening the player at that movement with that recording (`?recording=`); "Liked" in the header
+- [x] Score PDFs stored by slug: `storage/scores/<composer>/<work>/<label>.pdf` (numbered when taken); stored names limited to that shape (or the old uuid names, until moved); `npm run db:scores` moves existing files — test-first
+- [x] Manual verification checklist — passed
+- Decisions:
+  - ★, not ♥: the mini player's ♥ already means "like on Spotify"
+  - Likes are per recording (the owner's choice, after first building them per work movement): you like Volodos' II. Intermezzo, not II. Intermezzo in general, so the Liked list can name the performer. The two likes made in between moved to their works' earliest recordings. Likes of movements later removed from the work drop out of the list
+  - Score files: new uploads are filed by slug at once; `npm run db:scores` moves existing ones (rehearsed on copies of the database and the scores folder: 12 files moved, served back). Labels are mostly IMSLP file names, so names read like `imslp08450-brahms-op-118-sauer.pdf`; the file name is capped at 40 characters (cut at a word) because the longest paths neared Windows' 260-character limit, which Explorer, PowerShell and backup tools still hit. Old uuid names stay valid until moved, so nothing breaks before the move
 
 ### Milestone 13: Performers and playlists (completed 2026-10-25)
 Browse by performer and play through their recordings like a playlist.
