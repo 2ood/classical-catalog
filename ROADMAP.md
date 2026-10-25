@@ -6,13 +6,30 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 
 ## Planned
 
-### Milestone 8: Admin
+### Milestone 9: Admin
 - [ ] `POST /api/composers`, `POST /api/works`, `PATCH`/`DELETE /api/works/[id]`
 - [ ] `/admin` composer dashboard
 - [ ] `/admin/composer/[id]` — edit composer, add/remove works
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
 
 ## Completed
+
+### Milestone 8: Recording sync by movement (completed 2026-10-25)
+Movements belong to the work; scores mark start pages, recordings mark start times (YouTube) or tracks (Spotify).
+- [x] Data: `works.movements` (`[{ id, name }]`), `scores.movement_pages` and `recordings.movement_starts` (maps keyed by movement id); migration carries existing per-score movements over, then drops `scores.movements` — tested on a scratch database first
+- [x] `lib/movements.ts`: row validation for score pages / YouTube times / Spotify tracks, merging edits into the work list (stable ids), timestamp parse/format, movement at a playback time — test-first
+- [x] `PUT /api/scores/[id]/movements` and `PUT /api/recordings/[id]/movements` update the work's names and their own marks in one transaction — test-first
+- [x] YouTube player via the IFrame API: seek on movement choice; while playing, turn the score at each new movement
+- [x] Spotify: choosing a movement switches the embed to its track
+- [x] Recording movement editor (name + time with "Now", or name + track link) — test-first
+- [x] Manual verification checklist — passed
+- Decisions:
+  - Movement ids (not positions) key every score page and recording start, so inserting, removing or reordering movements never shifts marks
+  - Both editors edit the same work-level names and order; each saves names plus its own marks in one transaction
+  - Migration 0003 copied per-score movements to their works (the score with the most movements supplies the names; other scores map by position), rehearsed on a restored copy before running on the real database
+  - YouTube uses the IFrame API: choosing a movement in the score seeks the video; while playing (polled once a second) a new movement turns the score to its start page
+  - Spotify has no way to report which movement it is on, so its sync is one-way: choosing a movement loads that movement's track
+  - `MediaEmbed` became `SpotifyEmbed` once YouTube got its own player
 
 ### Milestone 7: Movement navigation (completed 2026-10-25)
 Turn the score by musical movement, not just by page.

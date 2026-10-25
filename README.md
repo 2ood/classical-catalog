@@ -10,6 +10,7 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 - Works list — grouped by genre, sorted by catalogue number, genre filter chips
 - Player page — PDF score viewer (upload, or search IMSLP) beside a YouTube/Spotify embed
 - Per-work performer tiles to switch between recordings
+- Movements: jump through the score by movement; a YouTube recording seeks to the chosen movement and turns the score as it plays; a Spotify recording loads each movement's track
 - PDF scores stored on local disk, served by the app
 - Admin pages for managing composers, works, recordings and scores (planned)
 

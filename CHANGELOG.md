@@ -31,8 +31,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - PDF.js decoder assets are copied to `public/pdfjs` on `npm install` and served by the app
 - Movement navigation in the score viewer: « / » jump to the previous / next movement (« first returns to the start of the current one) and a dropdown names the current movement, e.g. "II. Andante con moto"
 - Movement editor per score: enter each movement's name (usually its tempo) and start page, with "Add at page N" for the page on screen; movements are numbered automatically in page order and saved with `PUT /api/scores/[id]/movements`
+- Recording sync by movement: choosing a movement in the score seeks the YouTube video to its start or loads the movement's Spotify track; a playing YouTube video turns the score to each new movement's start page
+- Recording movement editor: start time per movement for YouTube (m:ss, with a "Now" button and "Add at m:ss"), or a track link per movement for Spotify
+- `PUT /api/recordings/[id]/movements`
 
 ### Changed
+- Movements now belong to the work: names and order are shared by all its scores and recordings, which each store their own start pages, times or tracks; existing per-score movements were migrated to their works
 - The app is now local-only: Postgres 17 runs in Docker Compose (`npm run db:up`), PDF scores are stored on local disk (`SCORES_DIR`, default `storage/scores`), and `npm run dev` / `npm start` listen on 127.0.0.1 only
 - Database access uses postgres.js instead of the Neon serverless driver; `npm run build` no longer needs `DATABASE_URL`
 - `POST /api/scores/upload` now receives the PDF itself, checks its `%PDF-` signature, and stores file and record together; `GET /api/scores/[id]/file` serves it; deleting a score removes its file
