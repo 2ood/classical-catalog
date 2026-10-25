@@ -1,32 +1,45 @@
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { NextResponse, type NextRequest } from "next/server";
-import { scoreUploadOptions } from "@/lib/blob";
-import { isSessionValid, SESSION_COOKIE } from "@/lib/session";
+import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { UUID } from "@/lib/recordings";
+import { scores, works } from "@/lib/schema";
+import { labelFromFilename } from "@/lib/scores";
+import { deleteScoreFile, isPdf, saveScoreFile } from "@/lib/storage";
 
-// Issues client-upload tokens so PDFs go straight from the browser to Blob,
-// avoiding the ~4.5MB request body limit on Vercel functions. The score
-// record is saved afterwards by POST /api/scores.
-export async function POST(request: NextRequest) {
-  if (!(await isSessionValid(request.cookies.get(SESSION_COOKIE)?.value))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+const badRequest = (error: string) =>
+  NextResponse.json({ error }, { status: 400 });
+
+export async function POST(request: Request) {
+  const form = await request.formData();
+  const workId = String(form.get("workId") ?? "");
+  if (!UUID.test(workId)) return badRequest("Invalid work id");
+
+  const file = form.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return badRequest("A PDF file is required");
+  }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!isPdf(bytes)) return badRequest("The file is not a PDF");
+
+  const [work] = await db
+    .select({ id: works.id })
+    .from(works)
+    .where(eq(works.id, workId));
+  if (!work) {
+    return NextResponse.json({ error: "Work not found" }, { status: 404 });
   }
 
+  const label =
+    String(form.get("label") ?? "").trim() || labelFromFilename(file.name);
+  const fileName = await saveScoreFile(bytes);
   try {
-    const result = await handleUpload({
-      request,
-      body: (await request.json()) as HandleUploadBody,
-      onBeforeGenerateToken: async (pathname) => {
-        if (!/^scores\/.+\.pdf$/i.test(pathname)) {
-          throw new Error("Scores must be PDFs under scores/");
-        }
-        return scoreUploadOptions;
-      },
-    });
-    return NextResponse.json(result);
+    const [score] = await db
+      .insert(scores)
+      .values({ workId, label, fileName })
+      .returning();
+    return NextResponse.json(score, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      { error: (error as Error).message },
-      { status: 400 },
-    );
+    await deleteScoreFile(fileName);
+    throw error;
   }
 }

@@ -36,7 +36,7 @@ export const scores = pgTable("scores", {
   id: uuid("id").primaryKey().defaultRandom(),
   workId: uuid("work_id").references(() => works.id, { onDelete: "cascade" }),
   label: text("label"),
-  blobUrl: text("blob_url").notNull(),
+  fileName: text("file_name").notNull(), // file in SCORES_DIR
   source: text("source"),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).defaultNow(),
 });

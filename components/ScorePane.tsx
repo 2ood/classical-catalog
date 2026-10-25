@@ -10,19 +10,17 @@ const ScoreViewer = dynamic(() => import("./ScoreViewer"), {
   loading: () => <p className="text-muted">Loading viewer…</p>,
 });
 
-type PaneScore = { id: string; label: string | null; blobUrl: string };
+type PaneScore = { id: string; label: string | null };
 
 const headerButton = "px-2 py-0.5 border border-border hover:bg-surface";
 
 export default function ScorePane({
   workId,
   scores,
-  canEdit,
   imslpUrl,
 }: {
   workId: string;
   scores: PaneScore[];
-  canEdit: boolean;
   imslpUrl: string;
 }) {
   const router = useRouter();
@@ -71,7 +69,7 @@ export default function ScorePane({
         >
           IMSLP ↗
         </a>
-        {canEdit && scores.length > 0 && (
+        {selected && (
           <>
             <DropUpload workId={workId} compact />
             <button
@@ -86,13 +84,12 @@ export default function ScorePane({
       </div>
       {error && <p className="text-sm text-muted">{error}</p>}
       {selected ? (
-        <ScoreViewer key={selected.id} url={selected.blobUrl} />
-      ) : canEdit ? (
-        <DropUpload workId={workId} />
+        <ScoreViewer
+          key={selected.id}
+          url={`/api/scores/${selected.id}/file`}
+        />
       ) : (
-        <p className="flex-1 flex items-center justify-center text-muted">
-          No score yet.
-        </p>
+        <DropUpload workId={workId} />
       )}
     </section>
   );

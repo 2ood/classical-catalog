@@ -1,5 +1,5 @@
 {
-  "id": "50b11c28-f6e9-429f-95b1-c355f8866e76",
+  "id": "4f39f044-0d9a-4f37-9de4-a5ffd55a0c21",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -155,8 +155,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "blob_url": {
-          "name": "blob_url",
+        "file_name": {
+          "name": "file_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true

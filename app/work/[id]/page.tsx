@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import RecordingsPane from "@/components/RecordingsPane";
 import ScorePane from "@/components/ScorePane";
-import { isLoggedIn } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { UUID } from "@/lib/recordings";
 import { composers, recordings, scores, works } from "@/lib/schema";
@@ -39,11 +38,10 @@ async function Player({ params }: Pick<PageProps<"/work/[id]">, "params">) {
     .where(eq(recordings.workId, id))
     .orderBy(asc(recordings.createdAt));
   const scoreRows = await db
-    .select({ id: scores.id, label: scores.label, blobUrl: scores.blobUrl })
+    .select({ id: scores.id, label: scores.label })
     .from(scores)
     .where(eq(scores.workId, id))
     .orderBy(asc(scores.uploadedAt));
-  const canEdit = await isLoggedIn();
 
   return (
     <>
@@ -65,10 +63,9 @@ async function Player({ params }: Pick<PageProps<"/work/[id]">, "params">) {
         <ScorePane
           workId={work.id}
           scores={scoreRows}
-          canEdit={canEdit}
           imslpUrl={imslpSearchUrl({ ...work, composer: composer.name })}
         />
-        <RecordingsPane workId={work.id} recordings={recs} canEdit={canEdit} />
+        <RecordingsPane workId={work.id} recordings={recs} />
       </div>
     </>
   );

@@ -22,7 +22,7 @@ CREATE TABLE "scores" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"work_id" uuid,
 	"label" text,
-	"blob_url" text NOT NULL,
+	"file_name" text NOT NULL,
 	"source" text,
 	"uploaded_at" timestamp with time zone DEFAULT now()
 );

@@ -43,3 +43,6 @@ next-env.d.ts
 
 # PDF.js assets copied on postinstall
 /public/pdfjs
+
+# Uploaded PDF scores (SCORES_DIR default)
+/storage

@@ -1,53 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { imslpSearchUrl, labelFromFilename, parseScoreInput } from "./scores";
-
-const valid = {
-  workId: "3f2b8c1e-6a7d-4c1b-9e2f-0a1b2c3d4e5f",
-  blobUrl:
-    "https://abc123.public.blob.vercel-storage.com/scores/x/full-score-Xy12.pdf",
-  label: "  Full score ",
-  source: "",
-};
-
-describe("parseScoreInput", () => {
-  it("normalizes a valid input", () => {
-    expect(parseScoreInput(valid)).toEqual({
-      ok: true,
-      value: {
-        workId: valid.workId,
-        blobUrl: valid.blobUrl,
-        label: "Full score",
-        source: null,
-      },
-    });
-  });
-
-  it.each([
-    ["a non-object body", null],
-    ["a malformed work id", { ...valid, workId: "x" }],
-    [
-      "a URL outside Vercel Blob",
-      { ...valid, blobUrl: "https://example.com/a.pdf" },
-    ],
-    [
-      "a look-alike host",
-      {
-        ...valid,
-        blobUrl: "https://public.blob.vercel-storage.com.evil.io/a.pdf",
-      },
-    ],
-    [
-      "plain http",
-      {
-        ...valid,
-        blobUrl: "http://abc123.public.blob.vercel-storage.com/a.pdf",
-      },
-    ],
-    ["a missing URL", { ...valid, blobUrl: undefined }],
-  ])("rejects %s", (_, input) => {
-    expect(parseScoreInput(input)).toMatchObject({ ok: false });
-  });
-});
+import { imslpSearchUrl, labelFromFilename } from "./scores";
 
 describe("labelFromFilename", () => {
   it.each([

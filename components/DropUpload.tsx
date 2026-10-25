@@ -1,6 +1,5 @@
 "use client";
 
-import { upload } from "@vercel/blob/client";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { labelFromFilename } from "@/lib/scores";
@@ -18,7 +17,7 @@ export default function DropUpload({
 }) {
   const router = useRouter();
   const inputId = useId();
-  const [progress, setProgress] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -30,41 +29,34 @@ export default function DropUpload({
       return;
     }
 
-    setProgress(0);
+    const body = new FormData();
+    body.set("workId", workId);
+    body.set("label", labelFromFilename(file.name));
+    body.set("file", file);
+
+    setUploading(true);
     try {
-      const blob = await upload(`scores/${workId}/${file.name}`, file, {
-        access: "public",
-        handleUploadUrl: "/api/scores/upload",
-        contentType: "application/pdf",
-        onUploadProgress: ({ percentage }) => setProgress(percentage),
-      });
-      const res = await fetch("/api/scores", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workId,
-          blobUrl: blob.url,
-          label: labelFromFilename(file.name),
-        }),
-      });
-      if (!res.ok) throw new Error("saving the score failed");
+      const res = await fetch("/api/scores/upload", { method: "POST", body });
+      if (!res.ok) {
+        const message = (await res.json().catch(() => null))?.error;
+        throw new Error(message ?? "the server refused the file");
+      }
       router.refresh();
     } catch (e) {
       setError(`Upload failed: ${(e as Error).message}`);
     } finally {
-      setProgress(null);
+      setUploading(false);
     }
   }
 
-  const status =
-    progress !== null ? `Uploading… ${Math.round(progress)}%` : error;
+  const status = uploading ? "Uploading…" : error;
   const input = (
     <input
       id={inputId}
       type="file"
       accept="application/pdf,.pdf"
       className="sr-only"
-      disabled={progress !== null}
+      disabled={uploading}
       onChange={(e) => {
         handleFile(e.target.files?.[0]);
         e.target.value = "";
