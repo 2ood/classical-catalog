@@ -2,7 +2,8 @@ import Link from "next/link";
 import { CLOUD_WIDTH, fontSize, layoutCloud } from "@/lib/cloud";
 
 export type CloudComposer = {
-  id: string;
+  id: string; // seeds the layout
+  slug: string;
   shortName: string;
   era: string | null;
   recordedWorks: number;
@@ -36,7 +37,7 @@ export default function ComposerCloud({
       {words.map((w) => (
         <Link
           key={w.id}
-          href={`/composer/${w.id}`}
+          href={`/composer/${byId.get(w.id)!.slug}`}
           className="group absolute leading-none p-1 whitespace-nowrap hover:z-10"
           style={{ left: `${(w.x / CLOUD_WIDTH) * 100}%`, top: w.y }}
         >

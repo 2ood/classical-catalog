@@ -1,16 +1,19 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import PlayerSync from "@/components/PlayerSync";
 import RecordingsPane from "@/components/RecordingsPane";
 import ScorePane from "@/components/ScorePane";
+import WorkMovements from "@/components/WorkMovements";
 import { db } from "@/lib/db";
-import { UUID } from "@/lib/recordings";
 import { composers, recordings, scores, works } from "@/lib/schema";
 import { imslpSearchUrl } from "@/lib/scores";
+import { movementSlugs } from "@/lib/slugs";
 
-export default function WorkPage({ params }: PageProps<"/work/[id]">) {
+type Route = "/composer/[slug]/[work]/[[...movement]]";
+
+export default function WorkPage({ params }: PageProps<Route>) {
   return (
     // Full viewport minus the 3rem header in the root layout.
     <main className="h-[calc(100dvh-3rem)] flex flex-col">
@@ -21,17 +24,27 @@ export default function WorkPage({ params }: PageProps<"/work/[id]">) {
   );
 }
 
-async function Player({ params }: Pick<PageProps<"/work/[id]">, "params">) {
-  const { id } = await params;
-  if (!UUID.test(id)) notFound();
+async function Player({ params }: Pick<PageProps<Route>, "params">) {
+  const { slug, work: workSlug, movement = [] } = await params;
 
   const [row] = await db
     .select({ work: works, composer: composers })
     .from(works)
     .innerJoin(composers, eq(works.composerId, composers.id))
-    .where(eq(works.id, id));
-  if (!row) notFound();
+    .where(and(eq(composers.slug, slug), eq(works.slug, workSlug)));
+  if (!row || movement.length > 1) notFound();
   const { work, composer } = row;
+  const id = work.id;
+  const workPath = `/composer/${composer.slug}/${work.slug}`;
+
+  // Opened at a movement, e.g. from the works list. A movement renamed or
+  // moved since the link was made falls back to the work.
+  let initialMovement: string | undefined;
+  if (movement.length === 1) {
+    const index = movementSlugs(work.movements).indexOf(movement[0]);
+    if (index === -1) redirect(workPath);
+    initialMovement = work.movements[index].id;
+  }
 
   const recs = await db
     .select()
@@ -52,7 +65,7 @@ async function Player({ params }: Pick<PageProps<"/work/[id]">, "params">) {
     <>
       <div className="flex items-baseline gap-3 px-6 py-3 border-b border-border">
         <Link
-          href={`/composer/${composer.id}`}
+          href={`/composer/${composer.slug}`}
           aria-label={`Back to ${composer.name}`}
           className="text-muted hover:text-text"
         >
@@ -63,9 +76,14 @@ async function Player({ params }: Pick<PageProps<"/work/[id]">, "params">) {
           {work.key && `, ${work.key}`}
         </h1>
         <span className="text-xs text-muted">{composer.name}</span>
+        <WorkMovements movements={work.movements} />
       </div>
       <div className="flex-1 min-h-0 grid grid-cols-2 divide-x divide-border">
-        <PlayerSync movements={work.movements}>
+        <PlayerSync
+          key={initialMovement}
+          movements={work.movements}
+          initialMovement={initialMovement}
+        >
           <ScorePane
             workId={work.id}
             scores={scoreRows}

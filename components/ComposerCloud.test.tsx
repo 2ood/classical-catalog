@@ -5,18 +5,21 @@ import ComposerCloud from "./ComposerCloud";
 const composers = [
   {
     id: "00000000-0000-4000-8000-000000000001",
+    slug: "mozart",
     shortName: "Mozart",
     era: "Classical",
     recordedWorks: 4,
   },
   {
     id: "00000000-0000-4000-8000-000000000002",
+    slug: "bach",
     shortName: "Bach",
     era: "Baroque",
     recordedWorks: 1,
   },
   {
     id: "00000000-0000-4000-8000-000000000003",
+    slug: "part",
     shortName: "Pärt",
     era: null,
     recordedWorks: 0,
@@ -28,7 +31,7 @@ describe("ComposerCloud", () => {
     render(<ComposerCloud composers={composers} />);
     expect(screen.getByRole("link", { name: /Mozart/ })).toHaveAttribute(
       "href",
-      "/composer/00000000-0000-4000-8000-000000000001",
+      "/composer/mozart",
     );
   });
 

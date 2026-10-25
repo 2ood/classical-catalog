@@ -1,9 +1,11 @@
 import {
+  boolean,
   integer,
   jsonb,
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 import type { MovementMarks, WorkMovement } from "./movements";
@@ -12,24 +14,35 @@ export const composers = pgTable("composers", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   shortName: text("short_name").notNull(),
+  slug: text("slug").notNull().unique(), // in URLs, see lib/slugs.ts
   born: integer("born"),
   died: integer("died"),
   era: text("era"),
+  openOpusId: integer("open_opus_id").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
-export const works = pgTable("works", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  composerId: uuid("composer_id").references(() => composers.id, {
-    onDelete: "cascade",
-  }),
-  catalogueNum: text("catalogue_num"),
-  title: text("title").notNull(),
-  genre: text("genre").notNull(),
-  key: text("key"),
-  movements: jsonb("movements").$type<WorkMovement[]>().notNull().default([]),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+export const works = pgTable(
+  "works",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    composerId: uuid("composer_id").references(() => composers.id, {
+      onDelete: "cascade",
+    }),
+    catalogueNum: text("catalogue_num"),
+    title: text("title").notNull(),
+    slug: text("slug").notNull(), // unique per composer
+    genre: text("genre").notNull(),
+    key: text("key"),
+    openOpusId: integer("open_opus_id").unique(),
+    // Open Opus picks, a starting point for collecting.
+    popular: boolean("popular").notNull().default(false),
+    recommended: boolean("recommended").notNull().default(false),
+    movements: jsonb("movements").$type<WorkMovement[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => [unique().on(t.composerId, t.slug)],
+);
 
 export const recordings = pgTable("recordings", {
   id: uuid("id").primaryKey().defaultRandom(),

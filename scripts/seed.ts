@@ -2,6 +2,7 @@ import { loadEnvConfig } from "@next/env";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { composers, recordings, works } from "../lib/schema";
+import { slugify, workSlug } from "../lib/slugs";
 
 loadEnvConfig(process.cwd());
 const client = postgres(process.env.DATABASE_URL!);
@@ -131,12 +132,12 @@ async function main() {
   for (const entry of data) {
     const [composer] = await db
       .insert(composers)
-      .values(entry.composer)
+      .values({ ...entry.composer, slug: slugify(entry.composer.shortName) })
       .returning({ id: composers.id });
     for (const { recordings: recs, ...work } of entry.works) {
       const [inserted] = await db
         .insert(works)
-        .values({ ...work, composerId: composer.id })
+        .values({ ...work, slug: workSlug(work), composerId: composer.id })
         .returning({ id: works.id });
       if (recs.length > 0) {
         await db

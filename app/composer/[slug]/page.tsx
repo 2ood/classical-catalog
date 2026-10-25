@@ -5,12 +5,13 @@ import { Suspense } from "react";
 import WorksList from "@/components/WorksList";
 import { db } from "@/lib/db";
 import { getWorksForComposer } from "@/lib/queries";
-import { UUID } from "@/lib/recordings";
 import { composers } from "@/lib/schema";
 
-export default function ComposerPage({ params }: PageProps<"/composer/[id]">) {
+export default function ComposerPage({
+  params,
+}: PageProps<"/composer/[slug]">) {
   return (
-    <main className="p-6 max-w-3xl">
+    <main className="p-6 w-full max-w-3xl mx-auto">
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <Works params={params} />
       </Suspense>
@@ -18,17 +19,18 @@ export default function ComposerPage({ params }: PageProps<"/composer/[id]">) {
   );
 }
 
-async function Works({ params }: Pick<PageProps<"/composer/[id]">, "params">) {
-  const { id } = await params;
-  if (!UUID.test(id)) notFound();
+async function Works({
+  params,
+}: Pick<PageProps<"/composer/[slug]">, "params">) {
+  const { slug } = await params;
 
   const [composer] = await db
     .select()
     .from(composers)
-    .where(eq(composers.id, id));
+    .where(eq(composers.slug, slug));
   if (!composer) notFound();
 
-  const works = await getWorksForComposer(id);
+  const works = await getWorksForComposer(composer.id);
 
   return (
     <>
@@ -44,17 +46,11 @@ async function Works({ params }: Pick<PageProps<"/composer/[id]">, "params">) {
         {composer.era && (
           <span className="text-xs text-muted">{composer.era}</span>
         )}
-        <Link
-          href={`/admin/composer/${id}`}
-          className="ml-auto text-sm text-muted hover:text-text"
-        >
-          Edit
-        </Link>
       </header>
       {works.length === 0 ? (
         <p className="text-muted">No works yet.</p>
       ) : (
-        <WorksList works={works} />
+        <WorksList composerSlug={composer.slug} works={works} />
       )}
     </>
   );
