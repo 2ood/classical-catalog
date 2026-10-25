@@ -15,6 +15,27 @@
       "when": 1792889890940,
       "tag": "0001_noisy_inertia",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792890920645,
+      "tag": "0002_work_movements",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792890935955,
+      "tag": "0003_move_movements_to_works",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792890938971,
+      "tag": "0004_drop_score_movements",
+      "breakpoints": true
     }
   ]
 }

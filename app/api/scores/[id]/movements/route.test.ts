@@ -26,11 +26,16 @@ describe("PUT /api/scores/[id]/movements", () => {
     ]);
   });
 
-  it("rejects an invalid movement list", async () => {
-    const [status] = await put(SCORE_ID, {
-      movements: [{ name: "", page: 1 }],
-    });
-    expect(status).toBe(400);
+  it("rejects a blank movement name", async () => {
+    expect(
+      await put(SCORE_ID, { movements: [{ name: " ", mark: 1 }] }),
+    ).toEqual([400, "Names must be 1–200 characters"]);
+  });
+
+  it("rejects a bad start page", async () => {
+    expect(
+      await put(SCORE_ID, { movements: [{ name: "Adagio", mark: 0 }] }),
+    ).toEqual([400, "Start pages must be whole numbers from 1"]);
   });
 
   it("rejects a body without a movements list", async () => {

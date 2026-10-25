@@ -4,14 +4,18 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import DropUpload from "./DropUpload";
-import type { Movement } from "@/lib/movements";
+import type { MovementMarks } from "@/lib/movements";
 
 const ScoreViewer = dynamic(() => import("./ScoreViewer"), {
   ssr: false,
   loading: () => <p className="text-muted">Loading viewer…</p>,
 });
 
-type PaneScore = { id: string; label: string | null; movements: Movement[] };
+type PaneScore = {
+  id: string;
+  label: string | null;
+  movementPages: MovementMarks<number>;
+};
 
 const headerButton = "px-2 py-0.5 border border-border hover:bg-surface";
 
@@ -89,7 +93,7 @@ export default function ScorePane({
           key={selected.id}
           scoreId={selected.id}
           url={`/api/scores/${selected.id}/file`}
-          movements={selected.movements}
+          movementPages={selected.movementPages}
         />
       ) : (
         <DropUpload workId={workId} />

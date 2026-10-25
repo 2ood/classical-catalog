@@ -6,7 +6,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { Movement } from "./movements";
+import type { MovementMarks, WorkMovement } from "./movements";
 
 export const composers = pgTable("composers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -27,6 +27,7 @@ export const works = pgTable("works", {
   title: text("title").notNull(),
   genre: text("genre").notNull(),
   key: text("key"),
+  movements: jsonb("movements").$type<WorkMovement[]>().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
@@ -37,6 +38,11 @@ export const recordings = pgTable("recordings", {
   year: integer("year"),
   mediaType: text("media_type", { enum: ["youtube", "spotify"] }).notNull(),
   mediaUrl: text("media_url").notNull(),
+  // Per movement id: start in seconds (YouTube) or a track URL (Spotify).
+  movementStarts: jsonb("movement_starts")
+    .$type<MovementMarks<number | string>>()
+    .notNull()
+    .default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
@@ -46,8 +52,11 @@ export const scores = pgTable("scores", {
   label: text("label"),
   fileName: text("file_name").notNull(), // file in SCORES_DIR
   source: text("source"),
-  // Start page of each movement in this score, sorted by page.
-  movements: jsonb("movements").$type<Movement[]>().notNull().default([]),
+  // Start page per movement id of the work.
+  movementPages: jsonb("movement_pages")
+    .$type<MovementMarks<number>>()
+    .notNull()
+    .default({}),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).defaultNow(),
 });
 

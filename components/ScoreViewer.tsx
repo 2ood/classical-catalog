@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
-import MovementEditor from "./MovementEditor";
 import MovementNav from "./MovementNav";
 import PageControls from "./PageControls";
-import type { Movement } from "@/lib/movements";
+import { useMovementRequests, usePlayerSync } from "./PlayerSync";
+import ScoreMovementEditor from "./ScoreMovementEditor";
+import { placeMovements, type MovementMarks } from "@/lib/movements";
 
 // Must be set in the module that renders <Document> (see react-pdf README).
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -27,19 +28,27 @@ const options = {
 export default function ScoreViewer({
   scoreId,
   url,
-  movements,
+  movementPages,
 }: {
   scoreId: string;
   url: string;
-  movements: Movement[];
+  movementPages: MovementMarks<number>;
 }) {
+  const { movements, select } = usePlayerSync();
+  const placed = placeMovements(movements, movementPages);
   const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState(false);
   // A movement saved with a page past the end must not break the viewer.
-  const goTo = (p: number) => setPage(Math.min(Math.max(p, 1), numPages));
+  const goTo = (p: number) => setPage(Math.min(Math.max(p, 1), numPages || p));
+
+  // A playing recording reached a new movement: turn to its first page.
+  useMovementRequests("score", (movementId) => {
+    const start = movementPages[movementId];
+    if (start) goTo(start);
+  });
 
   useEffect(() => {
     const el = containerRef.current;
@@ -77,16 +86,24 @@ export default function ScoreViewer({
         </Document>
       </div>
       {editing && (
-        <MovementEditor
+        <ScoreMovementEditor
           scoreId={scoreId}
           movements={movements}
+          pages={movementPages}
           page={page}
           onClose={() => setEditing(false)}
         />
       )}
       {numPages > 0 && (
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-          <MovementNav movements={movements} page={page} onChange={goTo} />
+          <MovementNav
+            movements={placed}
+            at={page}
+            onSelect={(m) => {
+              goTo(m.start);
+              select(m.id, "score");
+            }}
+          />
           <PageControls page={page} total={numPages} onChange={goTo} />
           {!editing && (
             <button
