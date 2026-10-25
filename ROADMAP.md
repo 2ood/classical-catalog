@@ -6,17 +6,31 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 
 ## Planned
 
-### Milestone 6: Admin
+### Milestone 7: Admin
 - [ ] `POST /api/composers`, `POST /api/works`, `PATCH`/`DELETE /api/works/[id]`
 - [ ] `/admin` composer dashboard
 - [ ] `/admin/composer/[id]` — edit composer, add/remove works
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
 
-### Milestone 7: Vercel deploy
-- [ ] Link Neon and Blob integrations, set env vars
-- [ ] `vercel --prod` and production smoke test
-
 ## Completed
+
+### Milestone 6: Local-only pivot (completed 2026-10-25)
+Storing PDF scores in a hosted service is the wrong fit; the app now runs only on the owner's machine, using local disk and a local Postgres.
+- [x] `docker-compose.yml` — Postgres 17 with a named volume; `DATABASE_URL` points at it
+- [x] Swap `@neondatabase/serverless` for `postgres` (postgres.js) + `drizzle-orm/postgres-js`; one client reused across dev reloads
+- [x] Scores stored on local disk (`SCORES_DIR`, default `./storage/scores`, git-ignored); `scores.blob_url` → `file_name`; migration regenerated for the fresh database
+- [x] `POST /api/scores/upload` takes the PDF itself (multipart), checks it really is a PDF, saves file + record; `GET /api/scores/[id]/file` streams it; `DELETE /api/scores/[id]` removes both — test-first
+- [x] Remove login: `proxy.ts`, `lib/session.ts`, `lib/auth.ts`, `/login`, `/api/auth/*`, header link, `iron-session` / `bcryptjs`, credential env vars; editing controls always shown
+- [x] Remove `@vercel/blob`, `lib/blob.ts`, `POST /api/scores`
+- [x] `dev` / `start` bind to 127.0.0.1 only
+- [x] README, `.env.example` and docs updated for local setup; fresh local database seeded
+- [x] Manual verification checklist — passed
+- Decisions:
+  - Fresh local database (Neon data and the Blob-stored score were not migrated); the initial migration was regenerated with `file_name`
+  - Uploaded files get generated names (`<uuid>.pdf`); only such names are accepted when reading or deleting, so a stored name can't point outside `SCORES_DIR`
+  - Uploads are checked for the `%PDF-` signature, not just the file name or type
+  - `GET /api/scores/[id]/file` streams the PDF with a long-lived private cache header (file names never get reused)
+  - The composer page "Edit" link is always shown; it 404s until Milestone 7
 
 ### Milestone 5: Player — score pane (completed 2026-10-25, on Vercel Blob)
 - [x] `lib/blob.ts`; `POST /api/scores/upload`, `DELETE /api/scores/[id]`
@@ -108,3 +122,5 @@ End-to-end slice on real data: composer list → works list → player with a wo
 - Apple Music as a third media type
 - Users table / multi-user — replaced by env-var credentials for a single owner
 - Playwright / e2e tests — replaced by manual verification checklists
+- Vercel deploy (Neon + Blob) — dropped in the local-only pivot (2026-10-25); the app runs with `npm run build && npm start` on the owner's machine
+- Login / single-owner auth — removed in the local-only pivot; the server listens on 127.0.0.1 only

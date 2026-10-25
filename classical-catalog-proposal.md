@@ -1,5 +1,7 @@
 # Classical Music Catalog — Development Plan
 
+> **Superseded in part (2026-10-25):** the project pivoted to local-only. Vercel hosting, Neon, Vercel Blob and the login (sections 2, 3, 8, 10–11) are replaced by Postgres in Docker, PDFs on local disk, and no auth. See [ROADMAP.md](ROADMAP.md), Milestone 6.
+
 A personal web service for curating classical music scores and recordings, deployed on Vercel.
 
 ---

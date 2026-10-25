@@ -1,82 +1,80 @@
 # Classical Catalog
 
-A personal web app for curating a library of classical music scores and recordings. Browse composers in a word cloud, open a composer's works grouped by genre and sorted by catalogue number, then study a work in a split view: the PDF score on the left, a YouTube or Spotify recording on the right, switchable between stored performers. All data is entered by hand by a single logged-in owner; everyone else gets a read-only view.
+A personal, local-only web app for curating a library of classical music scores and recordings. Browse composers in a word cloud, open a composer's works grouped by genre and sorted by catalogue number, then study a work in a split view: the PDF score on the left, a YouTube or Spotify recording on the right, switchable between stored performers. It runs on your own machine — Postgres in Docker, PDF scores on local disk — and listens on 127.0.0.1 only, so there is no login.
 
-Full specification: [classical-catalog-proposal.md](classical-catalog-proposal.md).
+Original specification: [classical-catalog-proposal.md](classical-catalog-proposal.md) (hosting and auth sections superseded by the local-only pivot; see [ROADMAP.md](ROADMAP.md)).
 
 ## Features
 
 - Composer cloud — names sized by number of recorded works, deterministic layout
 - Works list — grouped by genre, sorted by catalogue number, genre filter chips
-- Player page — PDF score viewer (upload or IMSLP lookup) beside a YouTube/Spotify embed
+- Player page — PDF score viewer (upload, or search IMSLP) beside a YouTube/Spotify embed
 - Per-work performer tiles to switch between recordings
-- Single-user login (credentials in env vars); editing only when logged in
-- Admin pages for managing composers, works, recordings and scores
+- PDF scores stored on local disk, served by the app
+- Admin pages for managing composers, works, recordings and scores (planned)
 
 ## Tech Stack
 
 - Next.js (latest stable, App Router), TypeScript
 - Tailwind CSS v4 — monochrome design system
-- Neon Postgres via `@neondatabase/serverless` + Drizzle ORM
-- Vercel Blob for PDF storage
-- iron-session + bcryptjs for auth
+- PostgreSQL 17 (Docker Compose) via `postgres` (postgres.js) + Drizzle ORM
+- Local filesystem for PDF scores
 - react-pdf, YouTube and Spotify iframe embeds
 - Vitest + Testing Library; ESLint + Prettier
-- Deployed on Vercel
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 20+ and npm
-- A Neon Postgres database (free tier is enough)
-- A Vercel Blob token (only needed for score uploads)
+- Node.js 22+ and npm
+- Docker Desktop (running)
 
 ### Installation
 
 ```bash
 git clone https://github.com/2ood/classical-catalog.git
 cd classical-catalog
-npm install
-cp .env.example .env.local   # then fill in the values below
-npm run db:migrate           # apply drizzle/ migrations to Neon
+npm install                  # also copies PDF.js assets to public/pdfjs
+cp .env.example .env         # defaults match docker-compose.yml
+npm run db:up                # start Postgres in Docker
+npm run db:migrate           # apply drizzle/ migrations
 npm run db:seed              # optional sample data (skips a non-empty DB)
-npm run dev
+npm run dev                  # http://127.0.0.1:3000
 ```
+
+For everyday use, `npm run build && npm start` serves the optimized build on the same address.
 
 ### Environment variables
 
 ```
-DATABASE_URL=            # Neon connection string
-BLOB_READ_WRITE_TOKEN=   # Vercel Blob
-SESSION_SECRET=          # random 32+ char string
-ADMIN_USERNAME=
-ADMIN_PASSWORD_HASH=     # node -e "console.log(require('bcryptjs').hashSync('pw',10))"
+DATABASE_URL=postgres://classical:classical@127.0.0.1:5432/classical
+SCORES_DIR=              # optional; where PDFs are stored (default storage/scores)
 ```
 
-bcrypt hashes contain `$`, which Next.js expands as a variable reference — escape every `$` as `\$` in `.env.local` (single quotes do not prevent expansion). Values pasted into the Vercel dashboard need no escaping.
+Postgres data lives in the `pgdata` Docker volume; PDFs live in `SCORES_DIR`. Back up both to keep the library.
 
 ### Scripts
 
 ```bash
-npm run dev       # local dev server
-npm test          # Vitest
-npm run lint      # ESLint
-npm run format    # Prettier
+npm run dev          # dev server on 127.0.0.1
+npm start            # production server on 127.0.0.1 (after npm run build)
+npm test             # Vitest
+npm run lint         # ESLint
+npm run format       # Prettier
+npm run db:up        # start Postgres (docker compose up -d)
 npm run db:generate  # generate a migration after editing lib/schema.ts
 ```
-
-`npm run build` needs `DATABASE_URL` set (the Neon client is created at import time).
 
 ## Project Structure
 
 ```
-app/          routes: /, /composer/[id], /work/[id], /login, /admin/*, /api/*
-components/   UI components (ComposerCloud, WorksList, ScoreViewer, MediaEmbed, ...)
-lib/          db client, Drizzle schema, session, blob and media-URL helpers
-scripts/      tsx scripts (sample-data seed)
-drizzle/      generated SQL migrations (npm run db:generate)
-proxy.ts      auth guard for /admin and mutating API routes
+app/                routes: /, /composer/[id], /work/[id], /admin/*, /api/*
+components/         UI components (ComposerCloud, WorksList, ScoreViewer, MediaEmbed, ...)
+lib/                db client, Drizzle schema, local score storage, media-URL helpers
+scripts/            seed and PDF.js asset copy scripts
+drizzle/            generated SQL migrations (npm run db:generate)
+docker-compose.yml  local Postgres 17
+storage/            uploaded PDF scores (git-ignored)
 ```
 
 ## Conventions
@@ -86,7 +84,7 @@ proxy.ts      auth guard for /admin and mutating API routes
 - No e2e framework — each milestone ends with a manual check against `npm run dev`
 - Prettier formats, ESLint lints (`eslint-config-prettier` resolves conflicts)
 - Monochrome design tokens only — no ad-hoc colors; font weights 400/500 only, never bold
-- Mutating API routes and `/admin` pages require a session; reads are public
+- Local-only: servers bind to 127.0.0.1 and nothing requires a login
 
 ## Roadmap
 

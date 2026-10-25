@@ -31,8 +31,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - PDF.js decoder assets are copied to `public/pdfjs` on `npm install` and served by the app
 
 ### Changed
+- The app is now local-only: Postgres 17 runs in Docker Compose (`npm run db:up`), PDF scores are stored on local disk (`SCORES_DIR`, default `storage/scores`), and `npm run dev` / `npm start` listen on 127.0.0.1 only
+- Database access uses postgres.js instead of the Neon serverless driver; `npm run build` no longer needs `DATABASE_URL`
+- `POST /api/scores/upload` now receives the PDF itself, checks its `%PDF-` signature, and stores file and record together; `GET /api/scores/[id]/file` serves it; deleting a score removes its file
+- Editing controls (add/delete recordings, upload/remove scores, "Edit") are always shown
+- The scores table stores `file_name` instead of `blob_url` (fresh initial migration)
 - The add-recording form is no longer always visible; it opens from the "+" tile
 - The site header is a fixed 48px tall
+
+### Removed
+- Login, sessions and `proxy.ts`; `/login`, `/api/auth/*` and the header log in / log out link; `SESSION_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`
+- Vercel Blob uploads and `POST /api/scores`; `BLOB_READ_WRITE_TOKEN`
+- Neon serverless driver
 
 ### Fixed
 - Scanned scores (JBIG2 images) no longer render as blank pages
