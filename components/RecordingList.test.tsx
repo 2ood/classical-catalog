@@ -74,6 +74,7 @@ function renderList(
           performers={{
             r1: [{ name: "Seong-Jin Cho", slug: "seong-jin-cho" }],
           }}
+          likes={{ r1: ["m2"] }}
         />
         <Player onRequest={onRequest} />
       </PlayerSync>
@@ -118,7 +119,7 @@ describe("RecordingList", () => {
     expect(
       within(tracks)
         .getAllByRole("listitem")
-        .map((li) => li.textContent?.replace(/[▶·]/g, "").trim()),
+        .map((li) => li.textContent?.replace(/[▶·★☆]/g, "").trim()),
     ).toEqual([
       "I. Allegro maestoso",
       "II. Romance. Larghetto",
@@ -164,6 +165,38 @@ describe("RecordingList", () => {
       "href",
       "/performer/seong-jin-cho",
     );
+  });
+
+  it("likes and unlikes a movement with its star", async () => {
+    renderList();
+    const second = screen.getByRole("button", {
+      name: "Like II. Romance. Larghetto",
+    });
+    expect(second).toHaveAttribute("aria-pressed", "true");
+    const first = screen.getByRole("button", {
+      name: "Like I. Allegro maestoso",
+    });
+    expect(first).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(first);
+    expect(first).toHaveAttribute("aria-pressed", "true");
+    await vi.waitFor(() => {
+      const put = vi
+        .mocked(fetch)
+        .mock.calls.find(([url]) => url === "/api/likes");
+      expect(JSON.parse(put?.[1]?.body as string)).toEqual({
+        recordingId: "r1",
+        movementId: "m1",
+        liked: true,
+      });
+    });
+  });
+
+  it("likes a single piece as the work", () => {
+    renderList({ workMovements: [] });
+    expect(
+      screen.getByRole("button", { name: "Like Ballade No. 1" }),
+    ).toHaveAttribute("aria-pressed", "false");
   });
 
   it("edits a recording", () => {

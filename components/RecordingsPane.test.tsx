@@ -24,7 +24,7 @@ const recording = (id: string, performer: string) =>
 const cho = recording("r1", "Seong-Jin Cho");
 const zimerman = recording("r2", "Krystian Zimerman");
 
-function renderPane(queue: Queue | null = null) {
+function renderPane(queue: Queue | null = null, initialRecordingId?: string) {
   render(
     <SpotifyPlaybackProvider>
       <PlayerSync movements={[]}>
@@ -34,6 +34,7 @@ function renderPane(queue: Queue | null = null) {
           workTitle="Ballade No. 1"
           query="Chopin Ballade No. 1 Op. 23"
           queue={queue}
+          initialRecordingId={initialRecordingId}
         />
       </PlayerSync>
     </SpotifyPlaybackProvider>,
@@ -98,6 +99,15 @@ describe("RecordingsPane editing", () => {
     expect(screen.getByPlaceholderText("URL")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByPlaceholderText("URL")).toBeNull();
+  });
+});
+
+describe("RecordingsPane opened at a recording", () => {
+  it("shows that recording first (e.g. from the Liked page)", () => {
+    renderPane(null, "r2");
+    expect(
+      screen.getByRole("button", { name: /^Krystian Zimerman/ }),
+    ).toHaveAttribute("aria-expanded", "true");
   });
 });
 

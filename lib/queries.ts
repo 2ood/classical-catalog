@@ -4,6 +4,7 @@ import { db } from "./db";
 import {
   composerSchools,
   composers,
+  likedTracks,
   performerAliases,
   performers,
   recordingPerformers,
@@ -176,4 +177,45 @@ export async function getRecordingPerformers(workId: string) {
     (byRecording[recordingId] ??= []).push(p);
   }
   return byRecording;
+}
+
+/** Liked movement ids per recording of the work ("" for a recording's piece). */
+export async function getWorkLikes(
+  workId: string,
+): Promise<Record<string, string[]>> {
+  const rows = await db
+    .select({
+      recordingId: likedTracks.recordingId,
+      movementId: likedTracks.movementId,
+    })
+    .from(likedTracks)
+    .innerJoin(recordings, eq(recordings.id, likedTracks.recordingId))
+    .where(eq(recordings.workId, workId));
+  const byRecording: Record<string, string[]> = {};
+  for (const r of rows) (byRecording[r.recordingId] ??= []).push(r.movementId);
+  return byRecording;
+}
+
+/** Every like with its recording, work and composer, for the Liked page. */
+export function getLikes() {
+  return db
+    .select({
+      movementId: likedTracks.movementId,
+      recording: { id: recordings.id, performer: recordings.performer },
+      composer: {
+        slug: composers.slug,
+        name: composers.name,
+        born: composers.born,
+      },
+      work: {
+        slug: works.slug,
+        title: works.title,
+        catalogueNum: works.catalogueNum,
+        movements: works.movements,
+      },
+    })
+    .from(likedTracks)
+    .innerJoin(recordings, eq(recordings.id, likedTracks.recordingId))
+    .innerJoin(works, eq(works.id, recordings.workId))
+    .innerJoin(composers, eq(composers.id, works.composerId));
 }

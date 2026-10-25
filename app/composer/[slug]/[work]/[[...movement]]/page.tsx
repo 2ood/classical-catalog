@@ -10,7 +10,11 @@ import { db } from "@/lib/db";
 import { composers, recordings, scores, works } from "@/lib/schema";
 import { imslpSearchUrl } from "@/lib/scores";
 import { movementSlugs } from "@/lib/slugs";
-import { getPerformer, getRecordingPerformers } from "@/lib/queries";
+import {
+  getPerformer,
+  getRecordingPerformers,
+  getWorkLikes,
+} from "@/lib/queries";
 import { orderForQueue, queueStep } from "@/lib/queue";
 import { searchQuery } from "@/lib/suggestions";
 
@@ -32,7 +36,7 @@ async function Player({
   searchParams,
 }: Pick<PageProps<Route>, "params" | "searchParams">) {
   const { slug, work: workSlug, movement = [] } = await params;
-  const { queue: queueSlug, at } = await searchParams;
+  const { queue: queueSlug, at, recording } = await searchParams;
 
   const [row] = await db
     .select({ work: works, composer: composers })
@@ -120,6 +124,10 @@ async function Player({
           workTitle={work.title}
           performers={await getRecordingPerformers(work.id)}
           queue={queue}
+          likes={await getWorkLikes(work.id)}
+          initialRecordingId={
+            typeof recording === "string" ? recording : undefined
+          }
           query={searchQuery(composer, work)}
         />
       </div>

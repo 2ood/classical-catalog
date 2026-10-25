@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePlayerSync } from "./PlayerSync";
 import { useSpotifyPlayback } from "./SpotifyPlayback";
 import { movementLabel } from "@/lib/movements";
@@ -25,6 +26,7 @@ export default function RecordingList({
   onDelete,
   onEdit,
   performers = {},
+  likes = {},
 }: {
   recordings: Recording[];
   selectedId: string | undefined;
@@ -35,6 +37,9 @@ export default function RecordingList({
   onEdit: (id: string) => void;
   /** Each recording's performers, linked to their pages. */
   performers?: Record<string, { name: string; slug: string }[]>;
+  /** For liking movements (★). */
+  /** Liked movement ids per recording ("" for a recording's piece). */
+  likes?: Record<string, string[]>;
 }) {
   return (
     <ul className="flex flex-col">
@@ -92,7 +97,11 @@ export default function RecordingList({
               </p>
             )}
             {selected && (
-              <RecordingTracks recording={r} workTitle={workTitle} />
+              <RecordingTracks
+                recording={r}
+                workTitle={workTitle}
+                likes={likes[r.id] ?? []}
+              />
             )}
           </li>
         );
@@ -104,10 +113,22 @@ export default function RecordingList({
 function RecordingTracks({
   recording,
   workTitle,
+  likes,
 }: {
   recording: Recording;
   workTitle: string;
+  likes: string[];
 }) {
+  // ★ for a movement of this recording ("" is its piece).
+  const star = (movementId: string, label: string) => (
+    <LikeStar
+      key={`${recording.id}-${movementId}`}
+      recordingId={recording.id}
+      movementId={movementId}
+      label={label}
+      liked={likes.includes(movementId)}
+    />
+  );
   const { movements, current, select } = usePlayerSync();
   const { playback, command } = useSpotifyPlayback();
   const connected = playback?.connected === true;
@@ -143,6 +164,7 @@ function RecordingTracks({
             <span className="w-6 text-center text-muted">·</span>
           )}
           <span className="flex-1 truncate">{workTitle}</span>
+          {star("", workTitle)}
         </li>
       </ol>
     );
@@ -176,9 +198,48 @@ function RecordingTracks({
               <span className="w-6 text-center">·</span>
             )}
             <span className="flex-1 truncate">{label}</span>
+            {star(m.id, label)}
           </li>
         );
       })}
     </ol>
+  );
+}
+
+/** ★: likes a recording's movement (or piece), shown at once and saved behind. */
+function LikeStar({
+  recordingId,
+  movementId,
+  label,
+  liked: initial,
+}: {
+  recordingId: string;
+  movementId: string;
+  label: string;
+  liked: boolean;
+}) {
+  const [liked, setLiked] = useState(initial);
+  async function toggle() {
+    const next = !liked;
+    setLiked(next);
+    const res = await fetch("/api/likes", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recordingId, movementId, liked: next }),
+    }).catch(() => null);
+    if (!res?.ok) setLiked(!next);
+  }
+  return (
+    <button
+      type="button"
+      aria-label={`Like ${label}`}
+      aria-pressed={liked}
+      onClick={toggle}
+      className={`w-6 h-6 shrink-0 text-sm ${
+        liked ? "text-text" : "text-muted hover:text-text"
+      }`}
+    >
+      {liked ? "★" : "☆"}
+    </button>
   );
 }

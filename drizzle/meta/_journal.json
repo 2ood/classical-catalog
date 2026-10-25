@@ -71,6 +71,27 @@
       "when": 1792914880149,
       "tag": "0009_performers",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792918905862,
+      "tag": "0010_liked_movements",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792919620704,
+      "tag": "0011_liked_tracks",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792919630541,
+      "tag": "0012_drop_liked_movements",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+DROP TABLE "liked_movements" CASCADE;

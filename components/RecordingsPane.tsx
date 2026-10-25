@@ -16,6 +16,8 @@ export default function RecordingsPane({
   workTitle,
   performers,
   queue = null,
+  likes = {},
+  initialRecordingId,
 }: {
   workId: string;
   recordings: Recording[];
@@ -27,10 +29,14 @@ export default function RecordingsPane({
   performers?: Record<string, { name: string; slug: string }[]>;
   /** Playing through a performer: their recording here plays, then the next work. */
   queue?: Queue | null;
+  /** Liked movement ids per recording ("" for a recording's piece). */
+  likes?: Record<string, string[]>;
+  /** The recording to show first (from `?recording=`, e.g. the Liked page). */
+  initialRecordingId?: string;
 }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState(
-    queue?.recordingId ?? recordings[0]?.id,
+    queue?.recordingId ?? initialRecordingId ?? recordings[0]?.id,
   );
   const [adding, setAdding] = useState(false);
   // A suggested album the add form starts from.
@@ -85,6 +91,7 @@ export default function RecordingsPane({
             selectedId={selected?.id}
             workTitle={workTitle}
             performers={performers}
+            likes={likes}
             onSelect={(id) => {
               setSelectedId(id);
               setEditingId(null);

@@ -137,3 +137,17 @@ export const recordingPerformers = pgTable(
 );
 
 export type Performer = typeof performers.$inferSelect;
+
+// Liked (★) movements of recordings; movement_id "" is the recording's piece
+// (a work without movements). See lib/likes.ts.
+export const likedTracks = pgTable(
+  "liked_tracks",
+  {
+    recordingId: uuid("recording_id")
+      .notNull()
+      .references(() => recordings.id, { onDelete: "cascade" }),
+    movementId: text("movement_id").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.recordingId, t.movementId] })],
+);

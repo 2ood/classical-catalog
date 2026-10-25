@@ -36,6 +36,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               Classical Catalog
             </Link>
             <nav className="ml-auto flex gap-4">
+              <Link href="/liked" className="text-muted hover:text-text">
+                Liked
+              </Link>
               <Link href="/performers" className="text-muted hover:text-text">
                 Performers
               </Link>
