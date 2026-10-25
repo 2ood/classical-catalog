@@ -63,3 +63,11 @@ export const scores = pgTable("scores", {
 export type Composer = typeof composers.$inferSelect;
 export type Work = typeof works.$inferSelect;
 export type Recording = typeof recordings.$inferSelect;
+
+// The owner's Spotify login (one row, id 1); see lib/spotify-server.ts.
+export const spotifyTokens = pgTable("spotify_tokens", {
+  id: integer("id").primaryKey().default(1),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
