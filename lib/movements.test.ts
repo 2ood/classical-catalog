@@ -6,6 +6,7 @@ import {
   movementLabel,
   nextMovementStart,
   parseMovementRows,
+  parseMovementStarts,
   parsePage,
   parseSeconds,
   parseTimestamp,
@@ -52,6 +53,40 @@ describe("mark parsers", () => {
     expect(
       parseTrackUrl("https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3"),
     ).toMatchObject({ ok: false });
+  });
+});
+
+describe("parseMovementStarts", () => {
+  const ids = ["m1", "m2"];
+  const TRACK = "https://open.spotify.com/track/0eBr9W1GE5nou99gRdy02J";
+
+  it("takes Spotify tracks per movement of the work, skipping blanks", () => {
+    expect(
+      parseMovementStarts({ m1: TRACK, m2: null }, "spotify", ids),
+    ).toEqual({ ok: true, value: { m1: TRACK } });
+  });
+
+  it("takes seconds for YouTube", () => {
+    expect(parseMovementStarts({ m2: 312 }, "youtube", ids)).toEqual({
+      ok: true,
+      value: { m2: 312 },
+    });
+  });
+
+  it("is empty when nothing is sent", () => {
+    expect(parseMovementStarts(undefined, "spotify", ids)).toEqual({
+      ok: true,
+      value: {},
+    });
+  });
+
+  it.each([
+    ["a movement not in the work", { m9: TRACK }, "spotify"],
+    ["a link that is not a track", { m1: "https://example.com" }, "spotify"],
+    ["a negative time", { m1: -4 }, "youtube"],
+    ["a list", [TRACK], "spotify"],
+  ] as const)("rejects %s", (_, raw, mediaType) => {
+    expect(parseMovementStarts(raw, mediaType, ids).ok).toBe(false);
   });
 });
 

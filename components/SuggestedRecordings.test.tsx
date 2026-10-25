@@ -1,10 +1,8 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SuggestedRecordings from "./SuggestedRecordings";
 
-const refresh = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh }),
   usePathname: () => "/composer/brahms/klavierstucke-op-118",
 }));
 
@@ -37,7 +35,9 @@ afterEach(() => {
 describe("SuggestedRecordings", () => {
   it("lists Spotify albums found for the work", async () => {
     serve(Response.json({ suggestions: [volodos] }));
-    render(<SuggestedRecordings workId={WORK_ID} query={QUERY} />);
+    render(
+      <SuggestedRecordings workId={WORK_ID} query={QUERY} onAdd={vi.fn()} />,
+    );
 
     expect(await screen.findByText("Brahms: Piano Pieces")).toBeInTheDocument();
     expect(screen.getByText("Arcadi Volodos · 2017")).toBeInTheDocument();
@@ -46,23 +46,18 @@ describe("SuggestedRecordings", () => {
     );
   });
 
-  it("adds a suggestion as a recording, then refreshes", async () => {
-    serve(
-      Response.json({ suggestions: [volodos] }),
-      new Response("{}", { status: 201 }),
+  it("hands a suggestion to the add form", async () => {
+    serve(Response.json({ suggestions: [volodos] }));
+    const onAdd = vi.fn();
+    render(
+      <SuggestedRecordings workId={WORK_ID} query={QUERY} onAdd={onAdd} />,
     );
-    render(<SuggestedRecordings workId={WORK_ID} query={QUERY} />);
     fireEvent.click(
       await screen.findByRole("button", { name: "Add Brahms: Piano Pieces" }),
     );
-
-    await waitFor(() => expect(refresh).toHaveBeenCalled());
-    const [url, init] = vi.mocked(fetch).mock.calls[1];
-    expect(url).toBe("/api/spotify/suggestions");
-    expect(JSON.parse(init?.body as string)).toEqual({
-      workId: WORK_ID,
-      albumId: volodos.albumId,
-    });
+    expect(onAdd).toHaveBeenCalledWith(volodos.url);
+    // Nothing is saved until the form is.
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
   });
 
   it("offers to connect Spotify when it isn't", async () => {
@@ -72,7 +67,9 @@ describe("SuggestedRecordings", () => {
         { status: 409 },
       ),
     );
-    render(<SuggestedRecordings workId={WORK_ID} query={QUERY} />);
+    render(
+      <SuggestedRecordings workId={WORK_ID} query={QUERY} onAdd={vi.fn()} />,
+    );
     expect(
       await screen.findByRole("link", { name: "Connect Spotify" }),
     ).toHaveAttribute(
@@ -83,7 +80,9 @@ describe("SuggestedRecordings", () => {
 
   it("always links a YouTube search", () => {
     serve(Response.json({ suggestions: [] }));
-    render(<SuggestedRecordings workId={WORK_ID} query={QUERY} />);
+    render(
+      <SuggestedRecordings workId={WORK_ID} query={QUERY} onAdd={vi.fn()} />,
+    );
     expect(
       screen.getByRole("link", { name: "Find on YouTube ↗" }),
     ).toHaveAttribute(
@@ -94,7 +93,9 @@ describe("SuggestedRecordings", () => {
 
   it("says when Spotify finds nothing", async () => {
     serve(Response.json({ suggestions: [] }));
-    render(<SuggestedRecordings workId={WORK_ID} query={QUERY} />);
+    render(
+      <SuggestedRecordings workId={WORK_ID} query={QUERY} onAdd={vi.fn()} />,
+    );
     expect(
       await screen.findByText("Spotify found no albums for this work."),
     ).toBeInTheDocument();

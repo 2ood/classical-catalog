@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  albumToRecording,
+  recordingPreview,
   searchQuery,
   toSuggestions,
   tracksForMovements,
@@ -150,35 +150,41 @@ describe("tracksForMovements", () => {
   });
 });
 
-describe("albumToRecording", () => {
-  it("makes a Spotify recording with movement tracks", () => {
-    const recording = albumToRecording(
-      album(),
-      [
-        track(1, "Klavierstücke, Op. 118: I"),
-        track(2, "Klavierstücke, Op. 118: II"),
-      ],
-      composer,
-      {
-        id: "w1",
-        title: "Klavierstücke",
-        catalogueNum: "Op. 118",
-        movements: [
-          { id: "m1", name: "Intermezzo" },
-          { id: "m2", name: "Intermezzo" },
-        ],
-      },
-    );
-    expect(recording).toEqual({
-      workId: "w1",
+describe("recordingPreview", () => {
+  const work = {
+    title: "Klavierstücke",
+    catalogueNum: "Op. 118",
+    movements: [
+      { id: "m1", name: "Intermezzo" },
+      { id: "m2", name: "Intermezzo" },
+    ],
+  };
+  const tracks = [
+    track(1, "Waltzes, Op. 39: No. 1"),
+    track(2, "Klavierstücke, Op. 118: I"),
+    track(3, "Klavierstücke, Op. 118: II"),
+  ];
+
+  it("reads performers and year and matches tracks to movements", () => {
+    const preview = recordingPreview(album(), tracks, composer, work);
+    expect(preview).toMatchObject({
       performer: "Arcadi Volodos",
       year: 2017,
-      mediaType: "spotify",
       mediaUrl: "https://open.spotify.com/album/5Z9iiGl2FcIfa3BMiv6OIw",
       movementStarts: {
-        m1: "https://open.spotify.com/track/t1",
-        m2: "https://open.spotify.com/track/t2",
+        m1: "https://open.spotify.com/track/t2",
+        m2: "https://open.spotify.com/track/t3",
       },
     });
+  });
+
+  it("lists the work's own tracks first, then the rest of the album", () => {
+    const preview = recordingPreview(album(), tracks, composer, work);
+    expect(preview.tracks.map((t) => t.name)).toEqual([
+      "Klavierstücke, Op. 118: I",
+      "Klavierstücke, Op. 118: II",
+      "Waltzes, Op. 39: No. 1",
+    ]);
+    expect(preview.tracks[0].url).toBe("https://open.spotify.com/track/t2");
   });
 });

@@ -21,6 +21,8 @@ export default function RecordingsPane({
   const router = useRouter();
   const [selectedId, setSelectedId] = useState(recordings[0]?.id);
   const [adding, setAdding] = useState(false);
+  // A suggested album the add form starts from.
+  const [addUrl, setAddUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const selected = recordings.find((r) => r.id === selectedId) ?? recordings[0];
 
@@ -50,16 +52,33 @@ export default function RecordingsPane({
         selectedId={selected?.id}
         onSelect={setSelectedId}
         onDelete={handleDelete}
-        onAdd={() => setAdding((a) => !a)}
+        onAdd={() => {
+          setAddUrl("");
+          setAdding((a) => !a);
+        }}
       />
       {error && <p className="text-sm text-muted">{error}</p>}
       {adding && (
-        <AddRecordingForm workId={workId} onAdded={() => setAdding(false)} />
+        <AddRecordingForm
+          key={addUrl}
+          workId={workId}
+          initialUrl={addUrl}
+          onAdded={() => setAdding(false)}
+        />
       )}
       {selected ? (
         <RecordingPlayer key={selected.id} recording={selected} />
       ) : (
-        !adding && <SuggestedRecordings workId={workId} query={query} />
+        !adding && (
+          <SuggestedRecordings
+            workId={workId}
+            query={query}
+            onAdd={(url) => {
+              setAddUrl(url);
+              setAdding(true);
+            }}
+          />
+        )
       )}
     </section>
   );

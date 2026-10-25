@@ -46,6 +46,31 @@ export function parseTrackUrl(v: unknown): Parsed<string | null> {
     : { ok: false, error: "Each movement needs a Spotify track link" };
 }
 
+/**
+ * Starts sent with a new recording, `{ movementId: mark }`: Spotify track
+ * links or YouTube seconds, for movements of the work only; blanks skipped.
+ */
+export function parseMovementStarts(
+  raw: unknown,
+  mediaType: "youtube" | "spotify",
+  movementIds: string[],
+): Parsed<MovementMarks<number | string>> {
+  if (raw === undefined || raw === null) return { ok: true, value: {} };
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    return { ok: false, error: "Movement starts must be an object" };
+  }
+  const known = new Set(movementIds);
+  const parse = mediaType === "spotify" ? parseTrackUrl : parseSeconds;
+  const starts: MovementMarks<number | string> = {};
+  for (const [id, value] of Object.entries(raw)) {
+    if (!known.has(id)) return { ok: false, error: "Unknown movement" };
+    const mark = parse(value);
+    if (!mark.ok) return mark;
+    if (mark.value !== null) starts[id] = mark.value;
+  }
+  return { ok: true, value: starts };
+}
+
 /** Validates editor rows from a request body, keeping their order. */
 export function parseMovementRows<M>(
   body: unknown,

@@ -83,6 +83,17 @@ export function toSuggestions(
   }));
 }
 
+/** Does a track name belong to the work: its catalogue number, else title. */
+function belongsTo(work: WorkInfo): (name: string) => boolean {
+  if (!work.catalogueNum) {
+    return (name) => plain(name).includes(plain(work.title));
+  }
+  const number = new RegExp(
+    `${normalizeCatalogue(work.catalogueNum)}(?![0-9])`,
+  );
+  return (name) => number.test(normalizeCatalogue(name));
+}
+
 /**
  * Track links per movement id: the album's tracks for this work (by
  * catalogue number, or title when it has none), in album order, when there
@@ -93,12 +104,7 @@ export function tracksForMovements(
   work: WorkInfo,
   movements: WorkMovement[],
 ): MovementMarks<string> {
-  const belongs = work.catalogueNum
-    ? (name: string) =>
-        new RegExp(`${normalizeCatalogue(work.catalogueNum!)}(?![0-9])`).test(
-          normalizeCatalogue(name),
-        )
-    : (name: string) => plain(name).includes(plain(work.title));
+  const belongs = belongsTo(work);
   const ours = tracks.filter((t) => belongs(t.name));
   if (movements.length === 0 || ours.length !== movements.length) return {};
   return Object.fromEntries(
@@ -106,19 +112,32 @@ export function tracksForMovements(
   );
 }
 
-/** The recording to save for a suggested album. */
-export function albumToRecording(
+export type RecordingPreview = {
+  performer: string;
+  year: number | null;
+  mediaUrl: string;
+  /** The album's tracks, this work's first, for picking by hand. */
+  tracks: { url: string; name: string }[];
+  movementStarts: MovementMarks<string>;
+};
+
+/** What adding the album as a recording of the work would save. */
+export function recordingPreview(
   album: SpotifyAlbum,
   tracks: SpotifyTrack[],
   composer: Composer,
-  work: WorkInfo & { id: string; movements: WorkMovement[] },
-) {
+  work: WorkInfo & { movements: WorkMovement[] },
+): RecordingPreview {
+  const belongs = belongsTo(work);
+  const ordered = [
+    ...tracks.filter((t) => belongs(t.name)),
+    ...tracks.filter((t) => !belongs(t.name)),
+  ];
   return {
-    workId: work.id,
     performer: performerOf(album, composer),
     year: Number(album.release_date.slice(0, 4)) || null,
-    mediaType: "spotify" as const,
     mediaUrl: albumUrl(album.id),
+    tracks: ordered.map((t) => ({ url: trackUrl(t.id), name: t.name })),
     movementStarts: tracksForMovements(tracks, work, work.movements),
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Suggestion } from "@/lib/suggestions";
 
@@ -14,22 +14,22 @@ type State =
   | { status: "failed"; error: string };
 
 /**
- * For a work without recordings: Spotify albums to start from, each one
- * click from being a recording, and a YouTube search link.
+ * For a work without recordings: Spotify albums to start from ("Add" opens
+ * the add form with the album), and a YouTube search link.
  */
 export default function SuggestedRecordings({
   workId,
   query,
+  onAdd,
 }: {
   workId: string;
   /** "Brahms Klavierstücke Op. 118" */
   query: string;
+  /** Opens the add form with the album's link. */
+  onAdd: (albumUrl: string) => void;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const [state, setState] = useState<State>({ status: "loading" });
-  const [adding, setAdding] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let stale = false;
@@ -55,22 +55,6 @@ export default function SuggestedRecordings({
       stale = true;
     };
   }, [workId]);
-
-  async function handleAdd(albumId: string) {
-    setAdding(albumId);
-    setError(null);
-    const res = await fetch("/api/spotify/suggestions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workId, albumId }),
-    });
-    setAdding(null);
-    if (!res.ok) {
-      setError((await res.json().catch(() => null))?.error ?? "Failed to add");
-      return;
-    }
-    router.refresh();
-  }
 
   return (
     <div className="flex flex-col gap-3 text-sm">
@@ -113,18 +97,16 @@ export default function SuggestedRecordings({
                 </a>
                 <button
                   type="button"
-                  onClick={() => handleAdd(s.albumId)}
-                  disabled={adding !== null}
+                  onClick={() => onAdd(s.url)}
                   aria-label={`Add ${s.name}`}
-                  className={`${button} disabled:opacity-40`}
+                  className={button}
                 >
-                  {adding === s.albumId ? "Adding…" : "Add"}
+                  Add
                 </button>
               </li>
             ))}
           </ul>
         ))}
-      {error && <p className="text-muted">{error}</p>}
       <a
         href={`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`}
         target="_blank"
