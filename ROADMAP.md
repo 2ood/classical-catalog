@@ -8,13 +8,73 @@ _Nothing in progress._
 
 ## Planned
 
-### Milestone 10: Admin
+### Milestone 11: Collecting
+Explore the pre-populated catalogue and fill it in one work at a time; a work is collected once it has a recording.
+- [ ] Composer page header shows progress, e.g. "12 / 344 collected"; the cloud tooltip shows the same
+- [ ] Works list filter: All / Collected / To collect, plus "Highlights" (Open Opus popular / recommended) as a starting point
+- [ ] Search within a composer's works (title or catalogue number)
+- [ ] Cloud stays readable with many imported composers (sizes by collected works; uncollected composers at the smallest size)
+- [ ] Manual verification checklist
+
+### Milestone 12: Composer map views
+The home page gets a view switch (kept in the URL, e.g. `/?view=timeline`): the current cloud, a timeline, and clusters.
+- [ ] Timeline: lifespan bars on a year axis, packed into rows so contemporaries line up; zoom to an era; names link to the composer — layout test-first (no overlapping bars)
+- [ ] Clusters by period: one small cloud per Open Opus era (Medieval → 21st Century), in chronological order
+- [ ] Clusters by movement: composers can carry movement tags (Impressionism, Second Viennese School, The Five, Les Six, Nationalism, Minimalism, …); seeded from Wikidata's "movement" (P135) where it is more specific than the period, plus a small built-in list of well-known schools; editable per composer. A composer in several movements appears in each; untagged composers fall under their period
+- [ ] Schema: `composers.wikidata_id`, birth/death years kept from Open Opus, `composer_movements` (tags); migration
+- [ ] Manual verification checklist
+
+### Milestone 13: Performers and playlists
+Browse by performer and play through their recordings like a playlist.
+- [ ] Schema: `performers` (name, kind: conductor / orchestra / ensemble / soloist + instrument / singer) and `recording_performers` (recording ↔ performer, role); migration that splits existing text such as "Karajan / BPO" into performers — test-first on the parsing
+- [ ] Merge aliases (e.g. "BPO" into "Berliner Philharmoniker"), rename, set kind / instrument
+- [ ] Add-recording form picks existing performers or creates new ones
+- [ ] `/performers` index and `/performer/[id]` page: their recordings grouped by composer, with counts
+- [ ] Play-through: Play on a performer page opens the player on the first work and advances to the next work when a recording ends (YouTube end event; Spotify via playback polling), score following along; next / previous / position shown in the player — queue logic test-first
+- [ ] Manual verification checklist
+
+### Milestone 14: Admin
 - [ ] `POST /api/composers`, `POST /api/works`, `PATCH`/`DELETE /api/works/[id]`
 - [ ] `/admin` composer dashboard
-- [ ] `/admin/composer/[id]` — edit composer, add/remove works
+- [ ] `/admin/composer/[id]` — edit composer, add/remove works; bring back the composer page "Edit" link
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
 
 ## Completed
+
+### Milestone 10: Catalogue import from Open Opus (completed 2026-10-25)
+Pre-populate composers and their complete work lists from [Open Opus](https://openopus.org) (free API, ~220 composers), so the library starts full and gets collected piece by piece.
+- [x] `lib/openopus.ts`: fetch all composers and a composer's works — test-first against recorded sample responses (`lib/fixtures/`)
+- [x] Title parsing (`lib/work-titles.ts`): catalogue number, key and plain title out of Open Opus titles (`Symphony no. 5 in C minor, op. 67` → `Op. 67` · `C minor` · `Symphony No. 5`; BWV / K. / D. / Hob. / RV / WoO / op. … no. …) — test-first on real titles
+- [x] Genre from title (Symphony, Piano Concerto, Piano Sonata, String Quartet, Opera, Mass, …), falling back to Open Opus' broad genre (Chamber, Keyboard, Orchestral, Stage, Vocal) — test-first
+- [x] Schema: `composers.open_opus_id`, `works.open_opus_id` (unique), `works.popular` / `recommended` flags; migration 0006 (rehearsed on a restored copy, then applied)
+- [x] Import a composer (`lib/import.ts` plan, `lib/import-store.ts`, `POST /api/library/import`): upsert the composer, add their works; re-importing adds only new works; works already entered by hand are matched by catalogue number and linked, not duplicated — test-first
+- [x] `/library` page: browse Open Opus composers by era with search; each shows imported or not (with work count) and an Import button; "Library" link in the header
+- [x] Movements from MusicBrainz during import (`lib/musicbrainz.ts`): find the composer, page through their works with part links (1 request/s, retries), clean movement names, match parents to works by catalogue number (title when none) — test-first on real titles
+- [x] Import streams progress (newline-delimited JSON) after the works are saved; "Update" on imported composers adds new works and fills missing movements
+- [x] Work page header: "N movements" opens the work's full movement list, so an import can be checked before any score or recording marks where movements start (the player only lists marked movements)
+- [x] Composer page "Edit" link removed until Milestone 14 builds the admin pages (it led to a 404)
+- [x] Works list shows each work's movements indented under it (open by default, ▾/▸ folds a work's movements); a movement opens the player set to it: the score turns to its start page, YouTube is cued at its start time, the Spotify embed loads its track, Spotify Connect plays it on Play — test-first
+- [x] Movements fade individually: a movement is "recorded" when some recording has a start time or track for it
+- [x] Readable paths: `/composer/brahms`, `/composer/brahms/klavierstucke-op-118`, `/composer/brahms/klavierstucke-op-118/ii-intermezzo-in-a-dur-andante-teneramente` replace `/composer/[id]` and `/work/[id]`; `composers.slug` (unique) and `works.slug` (unique per composer), migration 0007 backfills existing rows (rehearsed on a restored copy, then applied) — test-first
+- [x] Composer page, Library and the home cloud centred in the window
+- [x] Manual verification checklist — passed
+- Decisions:
+  - One fetch of all ~220 composers, filtered by era and search in the browser, instead of Open Opus' by-era and search endpoints
+  - Output matches hand-entered style: `Op. 27 No. 2`, `K. 550`, `BWV 988`, `Hob. XVI:28`, keys as `E-flat major` (a bare `in D` means D major), nicknames kept in the title as `Piano Sonata No. 14 “Moonlight”`
+  - With several catalogue numbers, the composer's own catalogue is shown (BWV, HWV, K., D., Hob., RV, S.), then op., then secondary ones (WoO, Sz., BB, B., L., R.); all of them are tried when matching hand-entered works, format-insensitively. Works without any catalogue number match by title
+  - Genre: the form named first in the title wins ("Variations on a Theme from the Opera…" → Variations), then the subtitle ("[Opera]", "For string quartet"), then Open Opus' broad genre. Over 6,750 sample titles from 20 composers, 32 keep catalogue leftovers in the title (Open Opus' own `deest`, `H.31a/…` and the like)
+  - A composer entered by hand is matched by full name (ignoring case and accents); only their blank born / died / era are filled in, so hand-entered values (e.g. Beethoven as Classical) stay
+  - Open Opus answers unknown composers with HTTP 200 and `success: "false"`; the import route reports any Open Opus failure as 502 before touching the database
+  - Open Opus has no movements; MusicBrainz does (movements and a collection's pieces are "parts" of a work). Collections are stored like symphonies: pieces become the work's movements, no child works
+  - Fetched during import, as the owner chose, so import takes about 2 s per 100 MusicBrainz works (Beethoven 3,028 works ≈ 75 s, Bach 8,417 ≈ 3 min); works are saved first, so a MusicBrainz failure keeps them and "Update" retries
+  - Movements are only written to works whose list is empty, never replacing a list (and its score / recording marks) entered by hand
+  - MusicBrainz holds many duplicates and arrangements: arrangements and sections with their own parts are skipped, and among several candidates the most common number of movements wins. Beethoven: 206 of 344 works get movements; the rest are mostly songs and single pieces without parts
+  - The import keeps running on the server if the browser leaves the page
+  - Finding the composer on MusicBrainz searches every name field and accepts the main name, sort name or any alias in any word order: MusicBrainz names some composers in their own script ("Сергей Васильевич Рахманинов"), which first left Rachmaninoff without movements. Birth year (±1) tells namesakes apart; when no year agrees, the only person of that name is taken (early composers' dates differ between sources). All 220 Open Opus composers are found; when one isn't, the Library says so instead of finishing silently
+  - Opening a work at a movement never starts sound by itself: YouTube is cued (not played) at the movement's start, and Spotify Connect waits for Play
+  - Movements are shown in the works list unless folded (fold state is not remembered); Beethoven's page with all movements is ~540 KB
+  - Slugs: composers by short name (full name if two share one), works by title + catalogue number, repeats numbered `-2`, `-3`; at most 80 characters, cut at a word. Stored, so renaming a work keeps its URL. Existing rows got theirs in SQL (`unaccent`), new rows from `lib/slugs.ts`
+  - Movement slugs are not stored: numeral + name (`ii-andante-con-moto`), worked out from the work's current list, so repeated names stay distinct; a link to a movement renamed or moved since redirects to the work. API routes keep ids
 
 ### Milestone 9: Spotify Connect (completed 2026-10-25)
 Control the owner's Spotify app (Premium) instead of the embed, and sync both ways by movement.

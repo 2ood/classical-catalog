@@ -37,6 +37,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Spotify Connect (optional, needs Spotify Premium and a Spotify developer app): log in once with "Connect Spotify"; Spotify recordings then play in your own Spotify app, with what is playing, the device, Play / Pause and Disconnect shown in the recordings pane
 - With Spotify Connect, choosing a movement in the score plays that movement's track (inside the track's own album, so later movements follow), and the score turns to a movement when Spotify starts its track
 - `SPOTIFY_CLIENT_ID` / `SPOTIFY_REDIRECT_URI` settings and the `/api/spotify/*` routes; the login is kept in the local database
+- Library page (`/library`, linked from the header): every composer Open Opus knows (~220), filtered by era chips and an accent-insensitive search; each shows whether it is imported (with its work count) and an Import button
+- Importing a composer adds their complete work list from Open Opus, with catalogue number, key, plain title and genre read from each title (`Piano Sonata no. 14 in C sharp minor, op. 27 no. 2, "Moonlight"` → `Op. 27 No. 2` · `C-sharp minor` · `Piano Sonata No. 14 “Moonlight”` · Piano Sonata); works entered by hand are matched by catalogue number (or title) and linked instead of duplicated, and a composer entered by hand keeps their details
+- Imported works carry Open Opus' "popular" and "recommended" picks
+- Movements from MusicBrainz during import: symphonies, sonatas and concertos get their movements, collections (e.g. Brahms' Klavierstücke) their pieces; the Library row shows progress while they come in. Movement lists entered by hand are never replaced
+- "Update" on an imported composer adds new works and fills in missing movements; the Library says when movements failed or MusicBrainz has no match for the composer
+- `POST /api/library/import`, streaming its progress as newline-delimited JSON
+- Work page header: "N movements" opens the work's full movement list
+- Works list: each work's movements are listed under it, folded and unfolded with ▾ / ▸; clicking one opens the player at that movement (score at its start page, YouTube cued at its start, the Spotify embed on its track, Spotify Connect ready to play it on Play)
 
 ### Changed
 - Movements now belong to the work: names and order are shared by all its scores and recordings, which each store their own start pages, times or tracks; existing per-score movements were migrated to their works
@@ -47,11 +55,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The scores table stores `file_name` instead of `blob_url` (fresh initial migration)
 - The add-recording form is no longer always visible; it opens from the "+" tile
 - The site header is a fixed 48px tall
+- Readable addresses: `/composer/brahms`, `/composer/brahms/klavierstucke-op-118` and `/composer/brahms/klavierstucke-op-118/ii-intermezzo-in-a-dur-andante-teneramente` replace `/composer/<id>` and `/work/<id>`; a composer or work keeps its address when renamed
+- In the works list, a movement shows as recorded only when some recording has a start time or track for it
+- The composer page, the Library and the composer cloud are centred in the window
 
 ### Removed
 - Login, sessions and `proxy.ts`; `/login`, `/api/auth/*` and the header log in / log out link; `SESSION_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`
 - Vercel Blob uploads and `POST /api/scores`; `BLOB_READ_WRITE_TOKEN`
 - Neon serverless driver
+- The composer page "Edit" link, which led to a missing page (it returns with the admin pages)
 
 ### Fixed
 - Scanned scores (JBIG2 images) no longer render as blank pages

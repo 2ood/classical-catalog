@@ -6,8 +6,10 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 
 ## Features
 
+- Library — import composers and their complete work lists from [Open Opus](https://openopus.org), with movements (or a collection's pieces) from [MusicBrainz](https://musicbrainz.org); works you entered by hand are matched, not duplicated
 - Composer cloud — names sized by number of recorded works, deterministic layout
-- Works list — grouped by genre, sorted by catalogue number, genre filter chips
+- Works list — grouped by genre, sorted by catalogue number, genre filter chips; each work's movements listed under it, opening the player at that movement
+- Readable addresses, e.g. `/composer/brahms/klavierstucke-op-118/ii-intermezzo-in-a-dur-andante-teneramente`
 - Player page — PDF score viewer (upload, or search IMSLP) beside a YouTube/Spotify embed
 - Per-work performer tiles to switch between recordings
 - Movements: jump through the score by movement; a YouTube recording seeks to the chosen movement and turns the score as it plays; a Spotify recording loads each movement's track — or, with Spotify Connect, plays it in your Spotify app and turns the score as tracks change
@@ -45,6 +47,8 @@ npm run dev                  # http://127.0.0.1:3000
 
 For everyday use, `npm run build && npm start` serves the optimized build on the same address.
 
+To fill the library, open **Library** and import composers. Importing needs internet access: works come from Open Opus, movements from MusicBrainz, which allows about one request per second — a composer takes from a few seconds to about 3 minutes (Bach), with progress shown. **Update** adds new works and missing movements later.
+
 ### Environment variables
 
 ```
@@ -81,9 +85,9 @@ npm run db:generate  # generate a migration after editing lib/schema.ts
 ## Project Structure
 
 ```
-app/                routes: /, /composer/[id], /work/[id], /admin/*, /api/*
-components/         UI components (ComposerCloud, WorksList, ScoreViewer, MediaEmbed, ...)
-lib/                db client, Drizzle schema, local score storage, media-URL helpers
+app/                routes: /, /library, /composer/[slug], /composer/[slug]/[work]/[[...movement]], /api/*
+components/         UI components (ComposerCloud, WorksList, LibraryBrowser, ScoreViewer, RecordingPlayer, ...)
+lib/                db client, Drizzle schema, Open Opus / MusicBrainz clients, title parsing, import, slugs, local score storage
 scripts/            seed and PDF.js asset copy scripts
 drizzle/            generated SQL migrations (npm run db:generate)
 docker-compose.yml  local Postgres 17
