@@ -8,14 +8,6 @@ _Nothing in progress._
 
 ## Planned
 
-### Milestone 11: Collecting
-Explore the pre-populated catalogue and fill it in one work at a time; a work is collected once it has a recording.
-- [ ] Composer page header shows progress, e.g. "12 / 344 collected"; the cloud tooltip shows the same
-- [ ] Works list filter: All / Collected / To collect, plus "Highlights" (Open Opus popular / recommended) as a starting point
-- [ ] Search within a composer's works (title or catalogue number)
-- [ ] Cloud stays readable with many imported composers (sizes by collected works; uncollected composers at the smallest size)
-- [ ] Manual verification checklist
-
 ### Milestone 12: Composer map views
 The home page gets a view switch (kept in the URL, e.g. `/?view=timeline`): the current cloud, a timeline, and clusters.
 - [ ] Timeline: lifespan bars on a year axis, packed into rows so contemporaries line up; zoom to an era; names link to the composer — layout test-first (no overlapping bars)
@@ -40,6 +32,21 @@ Browse by performer and play through their recordings like a playlist.
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
 
 ## Completed
+
+### Milestone 11: Suggested recordings + works search (completed 2026-10-25)
+Finding recordings stays the owner's exploration; a work without recordings suggests a few to start from instead of pre-populating them.
+- [x] Search within a composer's works (title or catalogue number, accents ignored; `k550` finds `K. 550`), together with the genre chips — test-first
+- [x] `GET /api/spotify/suggestions?workId=` (`lib/suggestions.ts`): Spotify albums for the work (composer, title, catalogue number), each with performers (the composer left out), year and link — query building, ranking and result shaping test-first
+- [x] Empty recordings pane: up to 5 suggestions with "Listen ↗" and "Add", which saves one as a Spotify recording (`POST /api/spotify/suggestions`); "Connect Spotify" when not connected; always a "Find on YouTube ↗" search link
+- [x] Adding a suggestion fills each movement's track when the album's tracks for this work line up with the work's movements — matching test-first
+- [x] Manual verification checklist — passed
+- Decisions:
+  - Replaces the first Milestone 11 (Collecting: "12 / 344 collected", collected / to-collect filters, cloud sized by collected works): a counter pushes toward filling every work, while the owner wants to explore; suggestions help without deciding for them
+  - Spotify only, through the owner's Spotify login (album search); YouTube search inside the app would need a YouTube Data API key, so YouTube gets a search link, like the IMSLP button
+  - 10 albums are searched, ranked by whether their name gives the work's catalogue number (`Opus 18` counts) and title, keeping Spotify's order otherwise; 5 are shown. Singles and other works still slip in now and then
+  - Performers are the album's artists minus the composer, joined as "A / B / C" like hand-entered ones, ready for Milestone 13's performer split; covers are not shown
+  - Movement tracks: the album's tracks naming the work's catalogue number (title when none), in album order, are assigned only when there are exactly as many as the work has movements; otherwise the recording is added without them
+  - Suggestions show only while the work has no recordings; "+" adds more by hand as before
 
 ### Milestone 10: Catalogue import from Open Opus (completed 2026-10-25)
 Pre-populate composers and their complete work lists from [Open Opus](https://openopus.org) (free API, ~220 composers), so the library starts full and gets collected piece by piece.
