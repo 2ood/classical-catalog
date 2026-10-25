@@ -31,6 +31,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Link href="/" className="font-serif text-lg">
             Classical Catalog
           </Link>
+          <Link href="/library" className="ml-auto text-muted hover:text-text">
+            Library
+          </Link>
         </header>
         {children}
       </body>

@@ -1,0 +1,30 @@
+{
+  "status": {
+    "version": "1.20.6",
+    "success": "true",
+    "source": "db",
+    "rows": 2,
+    "api": "Open Opus-dyn"
+  },
+  "request": { "type": "name", "item": "all" },
+  "composers": [
+    {
+      "id": "149",
+      "name": "Adams",
+      "complete_name": "John Adams",
+      "birth": "1947-01-01",
+      "death": null,
+      "epoch": "21st Century",
+      "portrait": "https://assets.openopus.org/portraits/74462091-1568084854.jpg"
+    },
+    {
+      "id": "145",
+      "name": "Beethoven",
+      "complete_name": "Ludwig van Beethoven",
+      "birth": "1770-01-01",
+      "death": "1827-01-01",
+      "epoch": "Early Romantic",
+      "portrait": "https://assets.openopus.org/portraits/55910756-1568084860.jpg"
+    }
+  ]
+}

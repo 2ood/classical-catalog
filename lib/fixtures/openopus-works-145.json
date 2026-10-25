@@ -1,0 +1,48 @@
+{
+  "status": {
+    "success": "true",
+    "source": "db",
+    "rows": 3,
+    "api": "Open Opus-dyn",
+    "version": "1.20.6"
+  },
+  "request": { "type": "genre", "item": "all" },
+  "composer": {
+    "id": "145",
+    "name": "Beethoven",
+    "epoch": "Early Romantic",
+    "birth": "1770-01-01",
+    "death": "1827-01-01",
+    "complete_name": "Ludwig van Beethoven",
+    "portrait": "https://assets.openopus.org/portraits/55910756-1568084860.jpg"
+  },
+  "works": [
+    {
+      "title": "Grosse Fuge, op. 133",
+      "subtitle": "For string quartet",
+      "searchterms": "",
+      "popular": "0",
+      "recommended": "1",
+      "id": "16260",
+      "genre": "Chamber"
+    },
+    {
+      "title": "Piano Concerto no. 5 in E flat major, op. 73, \"Emperor\"",
+      "subtitle": "",
+      "searchterms": "",
+      "popular": "1",
+      "recommended": "1",
+      "id": "16218",
+      "genre": "Orchestral"
+    },
+    {
+      "title": "Piano Sonata no. 8 in C minor, op. 13, \"Pathétique\"",
+      "subtitle": "",
+      "searchterms": "",
+      "popular": "1",
+      "recommended": "1",
+      "id": "16222",
+      "genre": "Keyboard"
+    }
+  ]
+}
