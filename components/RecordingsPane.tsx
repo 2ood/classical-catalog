@@ -5,14 +5,18 @@ import { useState } from "react";
 import AddRecordingForm from "./AddRecordingForm";
 import PerformerTiles from "./PerformerTiles";
 import RecordingPlayer from "./RecordingPlayer";
+import SuggestedRecordings from "./SuggestedRecordings";
 import type { Recording } from "@/lib/schema";
 
 export default function RecordingsPane({
   workId,
   recordings,
+  query,
 }: {
   workId: string;
   recordings: Recording[];
+  /** Search words for the work, for suggestions. */
+  query: string;
 }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState(recordings[0]?.id);
@@ -55,7 +59,7 @@ export default function RecordingsPane({
       {selected ? (
         <RecordingPlayer key={selected.id} recording={selected} />
       ) : (
-        <p className="text-muted">No recordings yet.</p>
+        !adding && <SuggestedRecordings workId={workId} query={query} />
       )}
     </section>
   );

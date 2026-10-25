@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { composers, recordings, scores, works } from "@/lib/schema";
 import { imslpSearchUrl } from "@/lib/scores";
 import { movementSlugs } from "@/lib/slugs";
+import { searchQuery } from "@/lib/suggestions";
 
 type Route = "/composer/[slug]/[work]/[[...movement]]";
 
@@ -89,7 +90,11 @@ async function Player({ params }: Pick<PageProps<Route>, "params">) {
             scores={scoreRows}
             imslpUrl={imslpSearchUrl({ ...work, composer: composer.name })}
           />
-          <RecordingsPane workId={work.id} recordings={recs} />
+          <RecordingsPane
+            workId={work.id}
+            recordings={recs}
+            query={searchQuery(composer, work)}
+          />
         </PlayerSync>
       </div>
     </>
