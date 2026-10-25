@@ -21,12 +21,15 @@ function years({ born, died }: LibraryComposer) {
 
 export default function LibraryBrowser({
   composers,
+  initialQuery = "",
 }: {
   composers: LibraryComposer[];
+  /** e.g. a composer clicked in a map view (`?q=`). */
+  initialQuery?: string;
 }) {
   const router = useRouter();
   const [epoch, setEpoch] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [importing, setImporting] = useState<{
     id: number;
     status: string;

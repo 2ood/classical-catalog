@@ -101,6 +101,14 @@ describe("LibraryBrowser", () => {
     expect(names()).toEqual(["Antonín Dvořák"]);
   });
 
+  it("starts filtered when opened from a map view", () => {
+    render(
+      <LibraryBrowser composers={composers} initialQuery="Antonín Dvořák" />,
+    );
+    expect(screen.getByRole("searchbox")).toHaveValue("Antonín Dvořák");
+    expect(names()).toEqual(["Antonín Dvořák"]);
+  });
+
   it("links an imported composer and shows their work count", () => {
     render(<LibraryBrowser composers={composers} />);
     expect(
