@@ -8,20 +8,18 @@ _Nothing in progress._
 
 ## Planned
 
-### Milestone 13: Performers and playlists
-Browse by performer and play through their recordings like a playlist.
-- [ ] Schema: `performers` (name, kind: conductor / orchestra / ensemble / soloist + instrument / singer) and `recording_performers` (recording ↔ performer, role); migration that splits existing text such as "Karajan / BPO" into performers — test-first on the parsing
-- [ ] Merge aliases (e.g. "BPO" into "Berliner Philharmoniker"), rename, set kind / instrument
-- [ ] Add-recording form picks existing performers or creates new ones
-- [ ] `/performers` index and `/performer/[id]` page: their recordings grouped by composer, with counts
-- [ ] Play-through: Play on a performer page opens the player on the first work and advances to the next work when a recording ends (YouTube end event; Spotify via playback polling), score following along; next / previous / position shown in the player — queue logic test-first
-- [ ] Manual verification checklist
-
 ### Milestone 14: Admin
 - [ ] `POST /api/composers`, `POST /api/works`, `PATCH`/`DELETE /api/works/[id]`
 - [ ] `/admin` composer dashboard
 - [ ] `/admin/composer/[id]` — edit composer, add/remove works; bring back the composer page "Edit" link
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
+
+### Milestone 18: A YouTube player that survives navigation
+YouTube stops when you leave the work page, because its video lives in that page; Spotify doesn't, because it plays in the Spotify app (owner's question, 2026-10-25).
+- [ ] One YouTube player in the root layout (it persists across navigation; the App Router never unmounts the layout, so no change to a single-page app is needed). An iframe reloads when moved in the DOM, so it stays put and is positioned over the work page's video area there, and shrinks to a floating video beside the mini player elsewhere
+- [ ] The work page's ▶ track buttons, the score following along and the movement control talk to that one player
+- [ ] Play-through loads the next video into the same player (no new player per work, so no autoplay blocking)
+- [ ] Manual verification checklist
 
 ### Milestone 17: Library touches
 Small things for living with a full library (items 1, 6, 7).
@@ -31,6 +29,26 @@ Small things for living with a full library (items 1, 6, 7).
 - [ ] Manual verification checklist
 
 ## Completed
+
+### Milestone 13: Performers and playlists (completed 2026-10-25)
+Browse by performer and play through their recordings like a playlist.
+- [x] Parsing (`lib/performers.ts`): a recording's performer text split on " / ", notes in parentheses dropped ("Karajan / BPO (cycle)" → Karajan · BPO); kind guessed from the name (orchestra / choir / ensemble / person) — test-first on the real strings
+- [x] Schema: `performers` (name, slug, kind, instrument), `performer_aliases` (other names that mean the same performer), `recording_performers` (recording ↔ performer); migration; a script links existing recordings
+- [x] Resolving: each part matched to a performer by name or alias (case and accents ignored), else a new performer; done when a recording is added or edited — test-first
+- [x] `/performers` index (by kind, with recording counts) and `/performer/[slug]`: their recordings grouped by composer, each opening the work
+- [x] Merge (e.g. "BPO" into "Berliner Philharmoniker": the name becomes an alias, recordings move), rename (the old name stays an alias), set kind / instrument — on the performer page — test-first
+- [x] Performer names in the recordings list link to their pages
+- [x] People on `/performers` grouped by instrument or role, chosen from a fixed list (conductor; keyboards; strings; winds and brass; voices — `INSTRUMENTS`) whose order is the groups' order, people without one last as "Other"; a dropdown, shown only for people; the server accepts only listed values (asked during this milestone) — test-first
+- [x] Play-through (`lib/queue.ts`, `QueueBar`): "▶ Play all" on a performer page opens their first recording with the queue in the URL (`?queue=<performer>&at=<i>`); each work selects and starts that performer's recording (Spotify Connect plays it, YouTube autoplays) and moves to the next work when it ends (YouTube's end event; Spotify leaving the recording's own tracks); a queue bar shows "Playing through … · 2 / 4" with ⏮ ⏭ and ✕, over the whole queue (the current work in the accent color, each entry a link) — queue logic test-first
+- [x] Manual verification checklist — passed
+- Decisions:
+  - The performer text typed for a recording stays as typed and is what is shown; performers are linked behind it. Notes in parentheses ("(cycle)") stay in the text but name no performer
+  - Aliases instead of rewriting texts: merging and renaming keep every old name resolving to the right performer, so "BPO" typed later still finds the Berliner Philharmoniker
+  - No per-recording roles (conductor, soloist) for now: mostly implied by the kind; can come later
+  - Names are compared ignoring case, accents, hyphens and spaces, so "Seongjin Cho" and "Seong-Jin Cho" were one performer from the start; every name of a performer (its own included) is a row in `performer_aliases`, unique, so a name can never mean two performers
+  - The queue lives in the URL, not in app state: reloading, going back or sharing a link keeps the place, and ⏮ ⏭ are plain links. Its order is the performer page's (composer by birth, then catalogue number), from one function
+  - Spotify's end is "left the recording's own tracks after playing one": its movement tracks, or its single track. A whole-album recording without movement tracks can't be told apart from the rest of its album, so it waits for ⏭. The Spotify embed (not connected) can't autoplay
+  - Renaming keeps the slug, so a performer's page address stays; `npm run db:performers` linked the 24 existing recordings (28 performers; "BPO" is left for merging by hand)
 
 ### Milestone 15: Spotify player (completed 2026-10-25)
 A nicer player that follows you around the app (owner's notes 2026-10-25, items 2, 3, 8).

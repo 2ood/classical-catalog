@@ -61,6 +61,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Suggested recordings' "Listen" plays the album in your Spotify app, from the work's first track
 - For a work without movements, adding a Spotify album saves the work's own track (a "Track" dropdown when it isn't clear which)
 - `POST /api/spotify/control` (previous, next, repeat), `GET` / `PUT /api/spotify/library` (liked? like / unlike), `GET /api/spotify/locate` (the page for a playing track); the Spotify login also asks to read and change your library, for liking
+- Performers: each recording's performer text ("Karajan / BPO (cycle)") is linked to performers by name, ignoring case, accents and hyphens; new ones are created with a guessed kind (person, orchestra, choir, ensemble). `npm run db:performers` links recordings made before
+- `/performers` (people grouped by instrument or role from a fixed list, then orchestras, choirs, ensembles) and `/performer/<name>` (their recordings by composer); a "Performers" link in the header; a recording's performers link to their pages from the recordings list
+- On a performer page: rename (the old name stays another name for them), set kind and instrument or role, and merge with another performer ("BPO" into "Berliner Philharmoniker"); `PATCH /api/performers/[id]`, `POST /api/performers/[id]/merge`
+- Play-through: "▶ Play all" on a performer page plays their recordings one after another — each work opens with that recording playing (Spotify Connect, YouTube autoplay) and moves on when it ends; a queue bar shows the position, ⏮ ⏭ between works, ✕ to stop, and the whole queue with the current work highlighted
 
 ### Changed
 - Movements now belong to the work: names and order are shared by all its scores and recordings, which each store their own start pages, times or tracks; existing per-score movements were migrated to their works
