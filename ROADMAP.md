@@ -30,12 +30,6 @@ A nicer player that follows you around the app (owner's notes 2026-10-25, items 
 - [ ] Suggested recordings: "Listen" plays the album's first track (the work's first movement when it lines up) in the player instead of opening spotify.com
 - [ ] Manual verification checklist
 
-### Milestone 16: Adding recordings, better
-Adding a Spotify recording of a work with movements shouldn't mean pasting every movement's track afterwards (items 4, 5).
-- [ ] Pasting a Spotify album (or track) link shows the album's tracks matched to the work's movements right away, with performers and year read from Spotify; each match can be changed or cleared before saving — reuses Milestone 11's matching, test-first
-- [ ] One form for both cases: a whole-work link (album) fills every movement; a single track fits a one-movement work
-- [ ] Manual verification checklist
-
 ### Milestone 17: Library touches
 Small things for living with a full library (items 1, 6, 7).
 - [ ] Works list toggle "With recordings": only works that have at least one recording
@@ -44,6 +38,21 @@ Small things for living with a full library (items 1, 6, 7).
 - [ ] Manual verification checklist
 
 ## Completed
+
+### Milestone 16: Adding recordings, better (completed 2026-10-25)
+Adding a Spotify recording of a work with movements shouldn't mean pasting every movement's track afterwards (owner's notes 2026-10-25, items 4, 5).
+- [x] `GET /api/spotify/preview?workId=&url=`: for a Spotify album link, or any track of it, the album's performers, year and tracks, with tracks matched to the work's movements (Milestone 11's matching); tracks belonging to the work listed first — preview shaping test-first
+- [x] Add-recording form: pasting a Spotify link fills performer and year and shows each movement with its matched track in a dropdown of the album's tracks, changeable or clearable before saving; the media type follows the pasted link; a track link for a work without movements stays a track recording — test-first
+- [x] `POST /api/recordings` accepts movement starts (tracks or seconds per movement id of the work), so a recording is saved with its movements in one go — validation test-first
+- [x] Suggested recordings' "Add" opens this form filled with the album, so the matches are seen before saving (`POST /api/spotify/suggestions` removed)
+- [x] Without a Spotify login, or for YouTube, the form works as before (with a "Connect Spotify" hint for Spotify links)
+- [x] The movement control moves to the title bar, beside the work's name (asked during this milestone): « dropdown » lists every movement of the work, with or without a score; choosing one sends both panes there, and it follows page turns and playback. It replaces the dropdown beside the page turners and the "N movements" list — test-first
+- [x] Manual verification checklist — passed
+- Decisions:
+  - A track link is read as "this album": the whole album is previewed and saved as the recording, so pasting any movement's track works. Only for a work without movements does a track link stay a single-track recording
+  - Matching stays strict (every movement gets a track only when the album has exactly as many tracks for the work); otherwise the dropdowns start empty and are picked by hand, the work's own tracks on top
+  - Performer and year from Spotify only fill empty fields, so typed values win
+  - The Spotify routes share `lib/spotify-routes.ts` (409 codes for "not set up" / "not connected", work lookup, album with all tracks)
 
 ### Milestone 12: Composer map views (completed 2026-10-25)
 The home page gets a view switch (kept in the URL, e.g. `/?view=timeline`): the current cloud, a timeline, and clusters.

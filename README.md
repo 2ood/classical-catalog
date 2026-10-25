@@ -10,11 +10,12 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 - Composer cloud — names sized by number of recorded works, deterministic layout
 - Composer map views — a timeline of lifespans, clouds per period, and clouds per movement (The Five, Impressionism, Les Six, …; editable per composer), on the home page and over the whole Open Opus catalogue in the Library
 - Works list — grouped by genre, sorted by catalogue number, genre filter chips; each work's movements listed under it, opening the player at that movement
-- Suggested recordings — a work without recordings suggests Spotify albums of it, one click from being a recording (movement tracks set when they line up); plus a YouTube search link
+- Suggested recordings — a work without recordings suggests Spotify albums of it; plus a YouTube search link
+- Adding a Spotify recording matches the album's tracks to the work's movements as you paste the link, to check and adjust before saving
 - Search within a composer's works by title or catalogue number
 - Readable addresses, e.g. `/composer/brahms/klavierstucke-op-118/ii-intermezzo-in-a-dur-andante-teneramente`
 - Player page — PDF score viewer (upload, or search IMSLP) beside a YouTube/Spotify embed
-- Per-work performer tiles to switch between recordings
+- Per-work performer tiles to switch between recordings; a movement control beside the work's title moves score and recording together
 - Movements: jump through the score by movement; a YouTube recording seeks to the chosen movement and turns the score as it plays; a Spotify recording loads each movement's track — or, with Spotify Connect, plays it in your Spotify app and turns the score as tracks change
 - PDF scores stored on local disk, served by the app
 - Admin pages for managing composers, works, recordings and scores (planned)
