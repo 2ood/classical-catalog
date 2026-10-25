@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { imslpSearchUrl, labelFromFilename } from "./scores";
+import { imslpSearchUrl, labelFromFilename, scoreFileName } from "./scores";
 
 describe("labelFromFilename", () => {
   it.each([
@@ -36,6 +36,48 @@ describe("imslpSearchUrl", () => {
     });
     expect(query(url)).toBe(
       "site:imslp.org Cello Suite No. 1 Johann Sebastian Bach",
+    );
+  });
+});
+
+describe("scoreFileName", () => {
+  it("files a score under its composer and work, named after its label", () => {
+    expect(
+      scoreFileName(
+        "brahms",
+        "klavierstucke-op-118",
+        "IMSLP08450 Brahms Op.118 Sauer",
+        new Set(),
+      ),
+    ).toBe("brahms/klavierstucke-op-118/imslp08450-brahms-op-118-sauer.pdf");
+  });
+
+  it("numbers a name the work already has", () => {
+    expect(
+      scoreFileName(
+        "chopin",
+        "ballade-no-1-op-23",
+        "Urtext",
+        new Set(["chopin/ballade-no-1-op-23/urtext.pdf"]),
+      ),
+    ).toBe("chopin/ballade-no-1-op-23/urtext-2.pdf");
+  });
+
+  it("keeps file names short enough for Windows paths, cut at a word", () => {
+    const name = scoreFileName(
+      "beethoven",
+      "piano-sonata-no-14-moonlight-op-27-no-2",
+      "IMSLP90660 PMLP01458 Beethoven, Lv, Piano Sonata No.14, Op.27 No.2, EdMoscheles",
+      new Set(),
+    );
+    expect(name).toBe(
+      "beethoven/piano-sonata-no-14-moonlight-op-27-no-2/imslp90660-pmlp01458-beethoven-lv-piano.pdf",
+    );
+  });
+
+  it("names an unlabelled score plainly", () => {
+    expect(scoreFileName("ravel", "bolero", "  ", new Set())).toBe(
+      "ravel/bolero/score.pdf",
     );
   });
 });

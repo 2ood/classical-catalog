@@ -35,22 +35,46 @@ describe("isPdf", () => {
 });
 
 describe("score files", () => {
-  it("saves under SCORES_DIR (creating it) with a generated name", async () => {
-    const name = await saveScoreFile(pdf);
-    expect(name).toMatch(/^[0-9a-f-]{36}\.pdf$/);
-    expect(fs.readFileSync(scoreFilePath(name))).toEqual(Buffer.from(pdf));
-    expect(path.dirname(scoreFilePath(name))).toBe(path.join(dir, "nested"));
+  const NAME = "brahms/klavierstucke-op-118/imslp08450-brahms-op-118-sauer.pdf";
+
+  it("saves under SCORES_DIR in the composer's and work's folders", async () => {
+    await saveScoreFile(pdf, NAME);
+    const file = scoreFilePath(NAME);
+    expect(fs.readFileSync(file)).toEqual(Buffer.from(pdf));
+    expect(file).toBe(
+      path.join(
+        dir,
+        "nested",
+        "brahms",
+        "klavierstucke-op-118",
+        "imslp08450-brahms-op-118-sauer.pdf",
+      ),
+    );
+  });
+
+  it("still finds files stored under the old generated names", () => {
+    const old = "35806e83-000d-4215-a5e4-f6cc4b083533.pdf";
+    expect(scoreFilePath(old)).toBe(path.join(dir, "nested", old));
   });
 
   it("deletes a saved file, and ignores one that is already gone", async () => {
-    const name = await saveScoreFile(pdf);
-    await deleteScoreFile(name);
-    expect(fs.existsSync(scoreFilePath(name))).toBe(false);
-    await expect(deleteScoreFile(name)).resolves.toBeUndefined();
+    await saveScoreFile(pdf, NAME);
+    await deleteScoreFile(NAME);
+    expect(fs.existsSync(scoreFilePath(NAME))).toBe(false);
+    await expect(deleteScoreFile(NAME)).resolves.toBeUndefined();
   });
 
   it("refuses names that could escape the scores folder", () => {
-    for (const name of ["../secret.pdf", "..\\x.pdf", "a/b.pdf", "x.txt"]) {
+    for (const name of [
+      "../secret.pdf",
+      "..\\x.pdf",
+      "a/b.pdf",
+      "a/../b/c.pdf",
+      "a/b/../../../c.pdf",
+      "A/b/c.pdf",
+      "a/b/c.txt",
+      "/a/b/c.pdf",
+    ]) {
       expect(() => scoreFilePath(name)).toThrow();
     }
   });

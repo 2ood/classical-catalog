@@ -1,8 +1,9 @@
-import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const FILE_NAME = /^[0-9a-f-]{36}\.pdf$/;
+// "<composer>/<work>/<label>.pdf" in slug characters only (see scoreFileName),
+// or a generated name from before scores were filed by slug.
+const FILE_NAME = /^(?:[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-]+|[0-9a-f-]{36})\.pdf$/;
 const PDF_SIGNATURE = "%PDF-";
 
 // Scores are runtime data, not code: keep Turbopack from tracing the folder
@@ -20,19 +21,21 @@ export function isPdf(bytes: Uint8Array): boolean {
   );
 }
 
-/** Absolute path of a stored score; only accepts names we generated. */
+/** Absolute path of a stored score; only accepts names we make. */
 export function scoreFilePath(name: string): string {
   if (!FILE_NAME.test(name))
     throw new Error(`Invalid score file name: ${name}`);
-  return path.join(/*turbopackIgnore: true*/ scoresDir(), name);
+  return path.join(/*turbopackIgnore: true*/ scoresDir(), ...name.split("/"));
 }
 
-/** Writes the PDF under SCORES_DIR and returns its generated file name. */
-export async function saveScoreFile(bytes: Uint8Array): Promise<string> {
-  const name = `${randomUUID()}.pdf`;
-  await fs.mkdir(scoresDir(), { recursive: true });
-  await fs.writeFile(scoreFilePath(name), bytes);
-  return name;
+/** Writes the PDF under SCORES_DIR as `name` (see scoreFileName). */
+export async function saveScoreFile(
+  bytes: Uint8Array,
+  name: string,
+): Promise<void> {
+  const file = scoreFilePath(name);
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, bytes);
 }
 
 export async function deleteScoreFile(name: string): Promise<void> {

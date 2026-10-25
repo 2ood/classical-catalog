@@ -1,3 +1,4 @@
+import { slugify, uniqueSlug } from "./slugs";
 /** "Mozart_K550_full-score.pdf" → "Mozart K550 full score" */
 export function labelFromFilename(name: string): string {
   return name
@@ -19,4 +20,31 @@ export function imslpSearchUrl(work: {
     .filter(Boolean)
     .join(" ");
   return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+}
+
+// File names are capped, cut at a word, so whole paths stay well inside
+// Windows' 260-character limit (Explorer, backups).
+const MAX_FILE_NAME = 40;
+const shorten = (slug: string) =>
+  slug.length <= MAX_FILE_NAME
+    ? slug
+    : slug.slice(0, MAX_FILE_NAME + 1).replace(/-[^-]*$/, "");
+
+/**
+ * Where a new score is stored, under SCORES_DIR:
+ * "<composer>/<work>/<label>.pdf", numbered when the work has that name.
+ */
+export function scoreFileName(
+  composerSlug: string,
+  workSlug: string,
+  label: string,
+  taken: Set<string>,
+): string {
+  const folder = `${composerSlug}/${workSlug}`;
+  const names = new Set(
+    [...taken]
+      .filter((t) => t.startsWith(`${folder}/`))
+      .map((t) => t.slice(folder.length + 1).replace(/\.pdf$/, "")),
+  );
+  return `${folder}/${uniqueSlug(shorten(slugify(label)) || "score", names)}.pdf`;
 }
