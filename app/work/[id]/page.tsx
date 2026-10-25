@@ -38,7 +38,11 @@ async function Player({ params }: Pick<PageProps<"/work/[id]">, "params">) {
     .where(eq(recordings.workId, id))
     .orderBy(asc(recordings.createdAt));
   const scoreRows = await db
-    .select({ id: scores.id, label: scores.label })
+    .select({
+      id: scores.id,
+      label: scores.label,
+      movements: scores.movements,
+    })
     .from(scores)
     .where(eq(scores.workId, id))
     .orderBy(asc(scores.uploadedAt));

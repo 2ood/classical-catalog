@@ -1,4 +1,12 @@
-import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
+import type { Movement } from "./movements";
 
 export const composers = pgTable("composers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -38,6 +46,8 @@ export const scores = pgTable("scores", {
   label: text("label"),
   fileName: text("file_name").notNull(), // file in SCORES_DIR
   source: text("source"),
+  // Start page of each movement in this score, sorted by page.
+  movements: jsonb("movements").$type<Movement[]>().notNull().default([]),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).defaultNow(),
 });
 

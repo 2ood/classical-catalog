@@ -8,6 +8,13 @@
       "when": 1792888747313,
       "tag": "0000_curly_lilandra",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792889890940,
+      "tag": "0001_noisy_inertia",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
+import MovementEditor from "./MovementEditor";
+import MovementNav from "./MovementNav";
 import PageControls from "./PageControls";
+import type { Movement } from "@/lib/movements";
 
 // Must be set in the module that renders <Document> (see react-pdf README).
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -21,11 +24,22 @@ const options = {
 };
 
 /** Client-only: load with next/dynamic and `ssr: false`. */
-export default function ScoreViewer({ url }: { url: string }) {
+export default function ScoreViewer({
+  scoreId,
+  url,
+  movements,
+}: {
+  scoreId: string;
+  url: string;
+  movements: Movement[];
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [page, setPage] = useState(1);
+  const [editing, setEditing] = useState(false);
+  // A movement saved with a page past the end must not break the viewer.
+  const goTo = (p: number) => setPage(Math.min(Math.max(p, 1), numPages));
 
   useEffect(() => {
     const el = containerRef.current;
@@ -62,8 +76,28 @@ export default function ScoreViewer({ url }: { url: string }) {
           )}
         </Document>
       </div>
+      {editing && (
+        <MovementEditor
+          scoreId={scoreId}
+          movements={movements}
+          page={page}
+          onClose={() => setEditing(false)}
+        />
+      )}
       {numPages > 0 && (
-        <PageControls page={page} total={numPages} onChange={setPage} />
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+          <MovementNav movements={movements} page={page} onChange={goTo} />
+          <PageControls page={page} total={numPages} onChange={goTo} />
+          {!editing && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="text-sm text-muted hover:text-text"
+            >
+              {movements.length ? "Edit movements" : "Add movements"}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
