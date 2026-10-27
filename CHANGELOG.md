@@ -72,6 +72,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The floating video and the Spotify mini player minimize (▾) to a one-line bar and expand again (▴); the minimized video keeps playing
 - YouTube links with a timestamp (`t=754`, `t=754s`, `t=1h2m3s`, `#t=…`, an embed's `start=`) start the piece there — e.g. one piece inside a whole concert video — when the recording is played or opened without a movement; movement times stay times in the video
 
+- Concert videos: `/concerts` (in the header) lists every YouTube video mapped into pieces, with "+ Add concert" to paste a link (titles come from YouTube, no API key). `/concert/[video]` shows the video beside its pieces, each with a start and an optional end ("Now" buttons; a piece ends at the next one's start unless given its own end, e.g. before the applause), its work or one movement of it (searched across every composer, with composers not yet imported offered from Open Opus and imported on the spot) and its performers. Each piece is saved as an ordinary recording of its work, sharing the video; "Open concert ↗" on a work page leads back
+- A piece of a concert plays only itself on its work page: from its start, stopping at its end
+- Play mode for YouTube, one icon cycling through play along (green arrows: skip from a piece's own end to the next piece, pause after the last, move on to the next recording), loop the track (green arrows with a 1: back to the start of the current piece or movement) and off (gray arrows: the video just plays)
+- A recording can be of one movement, added from the work page too (a Movement choice in the form): a YouTube video of just that movement needs no start time, and a Spotify album gives just that movement's track
+- The performer field suggests known performers as you type, forgiving misspellings and other romanizations ("sungjin jo" finds Seong-Jin Cho, "wladimir horovits" Horowitz), with "+ New performer" for someone new; for several performers, it suggests for the one after the last "/"
+- The floating players drag to any corner and stay there: they stretch a little toward the pointer, jump to another corner as soon as the pointer is over it, and spring back when let go
+- A player that is playing (the floating video, the Spotify mini player or both) is tinted light mint
+- Only one player plays at a time: starting the video pauses Spotify, and Spotify starting pauses the video; pausing one never resumes the other
+- The Library dims composers not imported yet, and an "Imported only" switch (off at first) hides them
+- `GET /api/performers/search?q=` and `GET /api/works/search?q=`
 ### Changed
 - Movements now belong to the work: names and order are shared by all its scores and recordings, which each store their own start pages, times or tracks; existing per-score movements were migrated to their works
 - The app is now local-only: Postgres 17 runs in Docker Compose (`npm run db:up`), PDF scores are stored on local disk (`SCORES_DIR`, default `storage/scores`), and `npm run dev` / `npm start` listen on 127.0.0.1 only
@@ -88,6 +98,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The works list's "With recordings" is a switch, on by default (off for a composer with no recordings yet)
 - The recordings pane lists the work by movement instead of by performer: a "Whole work" row (every recording) and one row per movement, each with avatars (initials) of the recordings that have it and a dot for their source (Spotify green, YouTube red); a single piece is one row. Clicking an avatar plays that recording there and selects it; the selected recording is named below with its performers, ✎ edit and ✕ delete, and the ★s like its movements, on the rows where it has an avatar
 
+- Links to a recording use a short slug of its performer and year, `?recording=vladimir-horowitz-1987`, instead of its id (old links by id still work)
+- A YouTube link's timestamp is now stored as the recording's start (`start_seconds`, with an optional `end_seconds`), moved out of existing links by a migration
+- The minimized players show ⏯ and the title; a click anywhere else on the bar expands it, with an animated fold either way. The minimize button is an underscore, at the top right of the Spotify player
+- The Spotify mini player's controls are centred: like, previous, play/pause, next, repeat; repeat shows the loop icon with a 1, green while the track repeats
+- The players' animations play even when the system asks for reduced motion
 ### Removed
 - The performer tiles (initials) and the recordings pane's Spotify panel with "Play this recording from the start" (replaced by the track list and the mini player)
 - Login, sessions and `proxy.ts`; `/login`, `/api/auth/*` and the header log in / log out link; `SESSION_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`
@@ -96,6 +111,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The composer page "Edit" link, which led to a missing page (it returns with the admin pages)
 - The movement dropdown beside the score's page turners and the work page's "N movements" list (replaced by the title bar's movement control)
 
+- The floating video's ✕: it is never closed, only minimized
+- "Disconnect Spotify" from the mini player, until a settings page arrives with logins (the route remains)
 ### Fixed
 - Play started whatever Spotify had paused instead of the recording; it now resumes only a track of that recording and otherwise plays the recording
 - Recordings saved as a single Spotify track didn't start (an idle Spotify accepts a bare track request but doesn't play it); every recording now starts inside its album, and an album saved for a work without movements starts at the work's track

@@ -6,7 +6,7 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 
 ## Features
 
-- Library — import composers and their complete work lists from [Open Opus](https://openopus.org), with movements (or a collection's pieces) from [MusicBrainz](https://musicbrainz.org); works you entered by hand are matched, not duplicated
+- Library — dimmed until imported (or hidden with "Imported only"); import composers and their complete work lists from [Open Opus](https://openopus.org), with movements (or a collection's pieces) from [MusicBrainz](https://musicbrainz.org); works you entered by hand are matched, not duplicated
 - Composer cloud — names sized by number of recorded works, deterministic layout
 - Composer map views — a timeline of lifespans, clouds per period, and clouds per movement (The Five, Impressionism, Les Six, …; editable per composer), on the home page and over the whole Open Opus catalogue in the Library
 - Works list — grouped by genre, sorted by catalogue number, genre filter chips; each work's movements listed under it, opening the player at that movement
@@ -18,7 +18,9 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 - Player page — PDF score viewer (upload, or search IMSLP) beside a YouTube/Spotify embed
 - Recordings by movement — the whole work, then each movement, with an avatar per recording that has it (a green dot for Spotify, red for YouTube); click one to play it there, the movement playing in Spotify green; edit or delete the selected recording; a movement control beside the work's title moves score and recording together
 - Performers — recordings linked to performers (orchestras, choirs, people by instrument), with pages, renaming and merging; "Play all" plays a performer's recordings one after another
-- A floating mini player on every page while Spotify plays (previous / next, repeat, like, "Go to current track"); YouTube keeps playing across pages too, floating above it; both minimize to a one-line bar
+- A floating mini player on every page while Spotify plays (like, previous / play / next, repeat, "Go to current track"); YouTube keeps playing across pages too, floating above it. Both minimize to a bar with ⏯, drag to any corner, are tinted while playing, and never play at once: one starting pauses the other
+- Concert videos — map a whole concert on YouTube into its pieces (start, optional end before the applause, work or one movement, performers), each saved as a recording of its work; play along through the pieces, loop one, or neither
+- Performer suggestions while adding a recording, forgiving misspellings and other romanizations
 - Movements: jump through the score by movement; a YouTube recording seeks to the chosen movement (a link with a timestamp, e.g. into a whole concert, starts the piece there) and turns the score as it plays; a Spotify recording loads each movement's track — or, with Spotify Connect, plays it in your Spotify app and turns the score as tracks change
 - PDF scores stored on local disk by composer and work (`storage/scores/<composer>/<work>/<label>.pdf`), served by the app
 - Admin pages for managing composers, works, recordings and scores (planned)

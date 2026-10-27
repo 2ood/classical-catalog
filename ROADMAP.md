@@ -4,30 +4,22 @@ Spec: [classical-catalog-proposal.md](classical-catalog-proposal.md). Every mile
 
 ## In Progress
 
-_Nothing in progress._
+Nothing in progress; next is Milestone 21 (jazz foundations).
 
 ## Planned
-
-### Milestone 20: Concert videos — link to songs
-Today a recording goes from a work to a link; a whole concert on YouTube needs the other direction: one link, many works (by many composers and performers).
-- [ ] A page for one video: play it, and map timestamps to songs — each span picks its work (any composer), performers, and movement starts within it
-- [ ] Each mapped span becomes (or updates) a recording of its work, sharing the video; the work's pane plays just that span
-- [ ] From any recording with a video, open its concert page
-- To decide when planned: where a span ends (next span's start, or an explicit end), and whether spans are stored as recordings with start/end or as a separate concert table
-- First, before jazz (owner's call 2026-10-27): jazz live sets are whole concerts too, so the span's work picker must take any work, jazz tunes included
 
 ### Jazz standards (brainstormed 2026-10-27; Milestones 21–23)
 A second, fully separate catalogue of jazz tunes, listed as in *The Real Book*, each with its many covers. The owner's aim: a guide to which songs there are; exploring performers comes later.
 - Decisions:
   - All separate: its own entry page (`/jazz`), tune pages, Liked and Performers pages, and its own look (Blue Note: near-black with a saturated blue). The home page stays classical; the header links to Jazz. Only the floating players are shared, so playback goes on across both
   - A tune is a work (`tradition`: classical / jazz), so recordings, likes, scores, queues and concert spans work unchanged; composers become credits (several per tune, music / lyrics), since one composer per work doesn't hold
-  - Edition: Hal Leonard *The Real Book, Volume I, Sixth Edition* (C) — the legal edition of the original Berklee book and the most widely used. Page numbers must match the owner's own PDF
+  - Edition: the owner's PDFs are the classic *Real Book*, Fifth Edition, Vol. 1–3 (in `storage/books/`, git-ignored; personal use, never redistributed). Hal Leonard's Sixth Edition was recommended, but page numbers must match the owner's files
   - The book PDF is split at import into one small PDF per tune (start page to the page before the next tune), filed like today's scores, so the viewer is unchanged and nothing big is sent
-  - Index from the PDF's own bookmarks if it has them, else a CSV index (title, page; forScore / MobileSheets style) with an offset for the front matter; credits and year from MusicBrainz
+  - The PDFs are scans without bookmarks or text, but their page labels give the printed page numbers (Vol. 1: PDF 14–497 = pp. 1–484, appendix A1–A14; Vol. 2: PDF 8–421 = pp. 1–414; Vol. 3: PDF 6–365 = pp. 1–360). Index: OCR the typewritten index pages (i–vii, i–vi, i–iv) with Tesseract, checked automatically (every page exists; tunes tile the book); only flagged entries are fixed by hand (owner: no model-side OCR). Credits and year from MusicBrainz
   - A cover is one track (not an album); suggestions search Spotify tracks
   - No solo markers within covers (owner's call)
   - Fonts: try a Real Book–style hand-lettered font (e.g. Petaluma Script) for titles only; drop it if it's hard to read
-- Open: the owner is getting a copy of the book (a legal one: print to scan, or a digital edition)
+  - Scans are JBIG2: rendering needs PDF.js's wasm decoders, as the score viewer already has
 
 ### Milestone 21: Jazz foundations
 - [ ] Schema: `tradition`, style and Real Book page on works; composer credits table
@@ -36,7 +28,7 @@ A second, fully separate catalogue of jazz tunes, listed as in *The Real Book*, 
 - [ ] Tune page: lead sheet beside its covers; jazz Liked and Performers pages
 
 ### Milestone 22: Real Book import
-- [ ] Index from the PDF's bookmarks, or a CSV with a page offset
+- [ ] Index by Tesseract OCR of each volume's index pages, mapped through page labels, with automatic checks
 - [ ] Split into one PDF per tune; credits and year from MusicBrainz
 
 ### Milestone 23: Covers
@@ -50,6 +42,54 @@ A second, fully separate catalogue of jazz tunes, listed as in *The Real Book*, 
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
 
 ## Completed
+
+### Milestone 20: Concert videos — link to songs (completed 2026-10-27)
+Today a recording goes from a work to a link; a whole concert on YouTube needs the other direction: one link, many works (by many composers and performers). First, before jazz (owner's call 2026-10-27): jazz live sets are whole concerts too.
+- [x] Recordings get `start_seconds` / `end_seconds` columns; a pasted `t=` link fills in the start, and a migration moves existing `t=` links into the column (one source of truth, replacing Milestone 19's start-in-the-link) — test-first
+- [x] A span plays only itself in its work's pane: from its start, and it stops at its end (playing through a performer moves on to the next work there) — test-first
+- [x] `/concerts` (header link): every mapped video, with "+ Add concert" to paste a link; the title comes from YouTube's oEmbed (no API key)
+- [x] `/concert/[video]`: the video beside its spans, each with start and end ("Now" buttons), its work (searched across every composer's works, so jazz tunes join later), performers (prefilled from the previous span) and its movement starts through its work page (the piece's title links there with that recording, where Edit movements works on the same video); each span saves as a recording of its work, sharing the video — test-first
+- [x] "Open concert ↗" on any YouTube recording in a work's pane
+- Owner's notes after a first try (2026-10-27):
+- [x] The floating players (video and mini player, together) drag to any corner and stay there: they stretch a little toward the pointer (stiffly: at most 48 px) in the corner the drag began, move to another corner as soon as the pointer is over it (so the move is seen before letting go; there they sit still), and spring back when let go — test-first
+- [x] A concert piece can be one movement: the picker lists each work's movements; the excerpt shows on its movement's row only, not "Whole work" — test-first
+- [x] A composer not in the library yet: the picker offers Open Opus composers named in the search, imported right there (with progress), then searched again — test-first
+- [x] Play along / loop (an icon toggle in the accent color: circular arrows, with a 1 when looping), one mode for the YouTube player (floating player, concert page, work page): looping goes back to the current track's start (concert piece, movement or piece); playing along skips from a piece's own end (applause) to the next piece, or pauses after the last — test-first
+- [x] A recording can be of one movement, from a work page too: the add/edit form has a Movement choice (Whole work or one movement). A YouTube video of one movement needs no start; a Spotify album gives just that movement's track — test-first
+- [x] Links to a recording use its slug, `?recording=<performer>-<year>` (e.g. `vladimir-horowitz-1987`), not its id — test-first
+- [x] The performer field (work page form and concert page) offers known performers like the one being typed, forgiving misspellings and other romanizations ("sungjin jo" → Seong-Jin Cho, "wladimir horovits" → Horowitz); one not known is kept as "+ New performer", created on save as before. Arrow keys and Enter choose — test-first
+- [x] A player that is playing (the floating video, the Spotify mini player, or both) is tinted a light mint of the accent (`--color-accent-tint`) — test-first
+- [x] The mini player's controls are centered: like, ⏮, ⏯, ⏭, repeat, the repeat button showing the loop icons (with a 1 while repeating the track) — test-first
+- [x] "Disconnect Spotify" is hidden for now (the route stays); it returns on a user settings page once logins come back
+- [x] Play mode cycles three ways — play along, loop the track, off (gray arrows: the video just plays; no skipping applause, no looping, no moving on to the next recording) — test-first
+- [x] The mini player's repeat shows only the loop-one icon, accent while repeating the track and gray when not — test-first
+- [x] The library dims composers not imported yet, and has an "Imported only" switch (off by default), the works list's switch made shared (`Switch`) — test-first
+- [x] A minimized player (video or Spotify) is ⏯ then its title, and a click anywhere else on it expands it; it still drags, and the click ending a drag doesn't expand it — test-first
+- [x] The floating video has no ✕ (it is never closed, only minimized); both players' minimize button is an underscore icon, 1em — test-first
+- [x] Minimizing and expanding are animated: the video's height folds, the Spotify player's two views fold into each other (`Fold`) — test-first
+- [x] The expanded Spotify player's minimize button sits in its top-right corner — test-first
+- [x] One player at a time (`OnePlayerAtATime`): either player starting pauses the other; pausing one never resumes the other — test-first
+- [x] The players' folds and spring-back ignore the system's reduced-motion setting (the owner keeps Windows' animation effects off, yet wants these short animations)
+- [x] Manual verification checklist — passed, through the owner's rounds of notes (the reduced-motion fix the last one)
+- Decisions:
+  - A span ends at the next span's start (the last at the video's end) unless given its own end, e.g. to skip applause or talk
+  - Spans are ordinary recordings sharing a video id, not a separate concert table; a concert is the set of recordings of one video. "+ Add concert" just opens `/concert/[video]`, and the video joins `/concerts` with its first span (its title fetched from oEmbed when shown)
+  - At a span's end its work's pane stops; it doesn't carry on into the concert. The stop is YouTube's own `endSeconds`, so the video reports "ended" and a performer queue moves on as for any video
+  - Playing a span's whole recording loads the video afresh (a stop at the end doesn't survive seeking back)
+  - The concert page plays the video in the app's one player as "the concert" (no end), floating with a link back to the concert page; arriving while something else plays offers "▶ Play this concert here", as work pages do
+  - The work search for a piece matches every word against composer and work slugs, hyphens removed ("brahms 118", "k550")
+  - Corner and play mode are kept in this browser (local storage), read with `useSyncExternalStore` so the server renders the defaults (bottom-right, play along). Dragged, the video and the mini player each stretch (a `translate` on each, not on the stack: on the stack it would carry the work page video, positioned `fixed` inside it); it moves to another corner as soon as the pointer is over it. It only counts as a drag once the pointer moves (4 px), when it captures the pointer, so a click on a player stays a click, and the click ending a drag is swallowed
+  - The movement a recording is of is stored (`recordings.movement_id`, null for the whole work), no longer inferred from a span marking one movement: that missed a video of just the movement, with no start. Migration 0014 filled it in for the existing ones. Its movement start is the piece's start (0 without one), and the player treats an unmarked one the same way
+  - A recording's slug is stored (`recordings.slug`, unique within its work; `-2`, `-3`, … for the same performer and year, e.g. a Spotify album and a YouTube video of one performance). It follows an edit of the performer or year (links by the old slug then open the work's first recording). Links by id from before still work. Migration 0015 filled them in (with Postgres `unaccent`)
+  - Performer matching (`matchPerformers`) compares names by sound, roughly: romanization variants are folded (eo/u, ch/j, k/g, p/b, t/d, v/w/f, z/s, doubled letters, a silent h…), then words are compared by edit distance in any order, or run together ("Seongjin"); a word being typed counts as begun. The list is small, so it is matched in the app, not in Postgres
+  - Jumps happen only within 2 s after a track's end (the player now reports its time 4× a second), so a seek by hand isn't undone; after pausing at the last piece's end, playing on doesn't pause again. On a work page, playing along needs nothing new: the piece stops at its end by itself
+  - Composers can only be imported from Open Opus; one it doesn't know (or a jazz musician) waits for adding by hand (Milestone 14)
+  - The import's streamed progress is read by a shared helper (`lib/import-client.ts`), used by the Library and the picker
+  - Titles come from YouTube oEmbed, cached for good (`use cache`, `cacheLife("max")`); a failed fetch isn't cached and shows the video id instead
+  - Play mode "off" means the player does nothing by itself: no skipping applause, no looping, no moving on to the next recording; the video just plays (or stops at a span's end)
+  - Never both playing (`OnePlayerAtATime`, in the layout inside both providers): it watches each player's start; Spotify's start is seen at its next poll (2 s; 0.4 s after the app's own commands)
+  - Folding animates `height` for the video (fixed 16:9 of `w-80`) and `grid-template-rows` 0fr↔1fr for the Spotify player, whose two views both stay mounted, the hidden one `inert` and `aria-hidden`
+
 
 ### Milestone 19: Recordings by movement (completed 2026-10-27)
 Owner's notes 2026-10-27, before planning jazz standards.
