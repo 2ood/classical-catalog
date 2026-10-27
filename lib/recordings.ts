@@ -48,3 +48,13 @@ export function parseRecordingInput(body: unknown): Result {
 
   return { ok: true, value: { workId, performer, year, mediaType, mediaUrl } };
 }
+
+/** "Karajan / BPO" → "KB": first letters of the first two words. */
+export function performerInitials(performer: string): string {
+  const letters = performer
+    .split(/[\s/]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => Array.from(word)[0].toUpperCase());
+  return letters.join("") || "?";
+}

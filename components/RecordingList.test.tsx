@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import PlayerSync, { useMovementRequests } from "./PlayerSync";
+import PlayerSync from "./PlayerSync";
 import RecordingList from "./RecordingList";
 import SpotifyPlaybackProvider from "./SpotifyPlayback";
 import type { Recording } from "@/lib/schema";
@@ -35,32 +35,22 @@ const movements = [
   { id: "m3", name: "Rondo. Vivace" },
 ];
 
-/** Stand-in for the player: records what it is asked to play. */
-function Player({ onRequest }: { onRequest: (id: string) => void }) {
-  useMovementRequests("recording", onRequest);
-  return null;
-}
-
 function renderList(
   {
     workMovements = movements,
     recordings = [cho, zimerman],
     selectedId = "r1",
-    onSelect = vi.fn(),
-    onDelete = vi.fn(),
-    onEdit = vi.fn(),
     current,
   } = {} as {
     workMovements?: typeof movements;
     recordings?: Recording[];
     selectedId?: string;
-    onSelect?: (id: string) => void;
-    onDelete?: (id: string) => void;
-    onEdit?: (id: string) => void;
     current?: string;
   },
 ) {
-  const onRequest = vi.fn();
+  const onPlay = vi.fn();
+  const onDelete = vi.fn();
+  const onEdit = vi.fn();
   render(
     <SpotifyPlaybackProvider>
       <PlayerSync movements={workMovements} initialMovement={current}>
@@ -68,7 +58,7 @@ function renderList(
           recordings={recordings}
           selectedId={selectedId}
           workTitle="Ballade No. 1"
-          onSelect={onSelect}
+          onPlay={onPlay}
           onDelete={onDelete}
           onEdit={onEdit}
           performers={{
@@ -76,17 +66,26 @@ function renderList(
           }}
           likes={{ r1: ["m2"] }}
         />
-        <Player onRequest={onRequest} />
       </PlayerSync>
     </SpotifyPlaybackProvider>,
   );
-  return { onRequest, onSelect, onDelete, onEdit };
+  return { onPlay, onDelete, onEdit };
 }
+
+const rows = () =>
+  within(screen.getByRole("list", { name: "Recordings by movement" }))
+    .getAllByRole("listitem")
+    .map((li) => ({
+      label: li.querySelector("[data-label]")?.textContent,
+      avatars: within(li)
+        .queryAllByRole("button", { name: /^Play / })
+        .map((b) => b.textContent),
+    }));
 
 beforeEach(() => {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue(Response.json({ connected: false })),
+    vi.fn(async () => Response.json({ connected: false })),
   );
 });
 
@@ -96,78 +95,82 @@ afterEach(() => {
 });
 
 describe("RecordingList", () => {
-  it("lists recordings by performer, year and source", () => {
+  it("lists the whole work, then each movement with the recordings that have it", () => {
     renderList();
-    const rows = screen.getAllByRole("button", { name: /·/ });
-    expect(rows.map((r) => r.textContent)).toEqual([
-      "Seong-Jin Cho · 2016Spotify",
-      "Krystian Zimerman · 1988YouTube",
+    expect(rows()).toEqual([
+      { label: "Whole work", avatars: ["SC", "KZ"] },
+      { label: "I. Allegro maestoso", avatars: ["SC", "KZ"] },
+      { label: "II. Romance. Larghetto", avatars: ["SC"] },
+      { label: "III. Rondo. Vivace", avatars: [] },
     ]);
-    expect(rows[0]).toHaveAttribute("aria-expanded", "true");
-    expect(rows[1]).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("selects another recording", () => {
-    const { onSelect } = renderList();
-    fireEvent.click(screen.getByRole("button", { name: /^Krystian Zimerman/ }));
-    expect(onSelect).toHaveBeenCalledWith("r2");
-  });
-
-  it("shows the selected recording's movements, each with its own play", () => {
-    const { onRequest } = renderList();
-    const tracks = screen.getByRole("list", { name: "Tracks" });
-    expect(
-      within(tracks)
-        .getAllByRole("listitem")
-        .map((li) => li.textContent?.replace(/[▶·★☆]/g, "").trim()),
-    ).toEqual([
-      "I. Allegro maestoso",
-      "II. Romance. Larghetto",
-      "III. Rondo. Vivace",
-    ]);
-    fireEvent.click(
-      screen.getByRole("button", { name: "Play II. Romance. Larghetto" }),
+  it("shows each recording's source as a dot on its avatar", () => {
+    renderList();
+    const [cho, zimerman] = screen.getAllByRole("button", {
+      name: /^Play Whole work/,
+    });
+    expect(cho).toHaveAccessibleName(
+      "Play Whole work by Seong-Jin Cho · 2016 · Spotify",
     );
-    expect(onRequest).toHaveBeenCalledWith("m2");
-    // No track or time for III yet: nothing to play.
+    expect(within(cho).getByRole("img", { name: "Spotify" })).toHaveClass(
+      "bg-spotify",
+    );
+    expect(within(zimerman).getByRole("img", { name: "YouTube" })).toHaveClass(
+      "bg-youtube",
+    );
+  });
+
+  it("plays a recording's movement, or the whole recording, from its avatar", () => {
+    const { onPlay } = renderList();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /^Play I\. Allegro maestoso by Krystian Zimerman/,
+      }),
+    );
+    expect(onPlay).toHaveBeenCalledWith("r2", "m1");
+    fireEvent.click(
+      screen.getByRole("button", { name: /^Play Whole work by Seong-Jin Cho/ }),
+    );
+    expect(onPlay).toHaveBeenCalledWith("r1", null);
+  });
+
+  it("marks the selected recording's avatars", () => {
+    renderList({ selectedId: "r2" });
+    const avatars = screen.getAllByRole("button", { name: /^Play / });
     expect(
-      screen.queryByRole("button", { name: "Play III. Rondo. Vivace" }),
-    ).toBeNull();
+      avatars
+        .filter((a) => a.getAttribute("aria-current") === "true")
+        .map((a) => a.textContent),
+    ).toEqual(["KZ", "KZ"]);
   });
 
   it("marks the movement playing now", () => {
     renderList({ current: "m2" });
     const playing = screen
-      .getByRole("list", { name: "Tracks" })
-      .querySelector('[aria-current="true"]');
+      .getByRole("list", { name: "Recordings by movement" })
+      .querySelector('li[aria-current="true"]');
     expect(playing).toHaveTextContent("II. Romance. Larghetto");
-    // Its title and ▶ take the accent color; no other marker.
-    expect(playing).toHaveClass("text-accent");
-    expect(screen.queryByText("♪")).toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Play I. Allegro maestoso" })
-        .parentElement,
-    ).not.toHaveClass("text-accent");
+    expect(playing?.querySelector("[data-label]")).toHaveClass("text-accent");
   });
 
-  it("shows a single piece as one track named after the work", () => {
+  it("shows a single piece as one row named after the work", () => {
     renderList({ workMovements: [] });
-    expect(
-      within(screen.getByRole("list", { name: "Tracks" })).getByRole(
-        "listitem",
-      ),
-    ).toHaveTextContent("Ballade No. 1");
+    expect(rows()).toEqual([{ label: "Ballade No. 1", avatars: ["SC", "KZ"] }]);
   });
 
-  it("links the selected recording's performers to their pages", () => {
+  it("names the selected recording, linking its performers", () => {
     renderList();
+    expect(
+      screen.getByText("Seong-Jin Cho · 2016", { exact: false }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Seong-Jin Cho" })).toHaveAttribute(
       "href",
       "/performer/seong-jin-cho",
     );
   });
 
-  it("likes and unlikes a movement with its star", async () => {
+  it("likes and unlikes the selected recording's movements with stars", async () => {
     renderList();
     const second = screen.getByRole("button", {
       name: "Like II. Romance. Larghetto",
@@ -177,6 +180,10 @@ describe("RecordingList", () => {
       name: "Like I. Allegro maestoso",
     });
     expect(first).toHaveAttribute("aria-pressed", "false");
+    // The whole work isn't liked as such.
+    expect(
+      screen.queryByRole("button", { name: "Like Whole work" }),
+    ).toBeNull();
 
     fireEvent.click(first);
     expect(first).toHaveAttribute("aria-pressed", "true");
@@ -192,6 +199,17 @@ describe("RecordingList", () => {
     });
   });
 
+  it("stars the selected recording's movements, only where it has them", () => {
+    renderList({ selectedId: "r2" });
+    // Zimerman has only I, and hasn't liked it; Cho's ★ on II isn't his.
+    expect(
+      screen.getByRole("button", { name: "Like I. Allegro maestoso" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(
+      screen.queryByRole("button", { name: "Like II. Romance. Larghetto" }),
+    ).toBeNull();
+  });
+
   it("likes a single piece as the work", () => {
     renderList({ workMovements: [] });
     expect(
@@ -199,45 +217,19 @@ describe("RecordingList", () => {
     ).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("edits a recording", () => {
-    const { onEdit } = renderList();
+  it("edits and deletes the selected recording", () => {
+    const { onEdit, onDelete } = renderList();
     fireEvent.click(
       screen.getByRole("button", {
         name: "Edit the recording by Seong-Jin Cho",
       }),
     );
     expect(onEdit).toHaveBeenCalledWith("r1");
-  });
-
-  it("deletes a recording", () => {
-    const { onDelete } = renderList();
     fireEvent.click(
       screen.getByRole("button", {
         name: "Delete the recording by Seong-Jin Cho",
       }),
     );
     expect(onDelete).toHaveBeenCalledWith("r1");
-  });
-
-  it("plays a single piece in the owner's Spotify when connected", async () => {
-    vi.mocked(fetch).mockImplementation(async (url) =>
-      url === "/api/spotify/playback"
-        ? Response.json({ connected: true, state: null })
-        : url === "/api/spotify/status"
-          ? Response.json({ configured: true, connected: true })
-          : new Response(null, { status: 204 }),
-    );
-    renderList({ workMovements: [] });
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Play Ballade No. 1" }),
-    );
-    await vi.waitFor(() => {
-      const play = vi
-        .mocked(fetch)
-        .mock.calls.find(([url]) => url === "/api/spotify/play");
-      expect(JSON.parse(play?.[1]?.body as string)).toEqual({
-        recordingId: "r1",
-      });
-    });
   });
 });

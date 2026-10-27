@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseRecordingInput } from "./recordings";
+import { parseRecordingInput, performerInitials } from "./recordings";
 
 const valid = {
   workId: "3f2b8c1e-6a7d-4c1b-9e2f-0a1b2c3d4e5f",
@@ -56,5 +56,18 @@ describe("parseRecordingInput", () => {
       mediaUrl: "https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3",
     });
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("performerInitials", () => {
+  it.each([
+    ["Glenn Gould", "GG"],
+    ["Karajan / BPO", "KB"],
+    ["Karajan/BPO (cycle)", "KB"],
+    ["Fischer / Danish National Chamber Orchestra", "FD"],
+    ["  böhm  ", "B"],
+    ["", "?"],
+  ])("%j → %s", (performer, expected) => {
+    expect(performerInitials(performer)).toBe(expected);
   });
 });

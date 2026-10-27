@@ -22,11 +22,14 @@ const button = "px-3 py-1 border border-border hover:bg-surface";
 export default function SpotifyConnectPlayer({
   recording,
   autoplay = false,
+  playRequest = 0,
   onEnded,
 }: {
   recording: Recording;
   /** Start playing once connected (playing through a performer). */
   autoplay?: boolean;
+  /** Raised to play the whole recording (the list's avatar). */
+  playRequest?: number;
   /** Spotify moved past the recording's own tracks. */
   onEnded?: () => void;
 }) {
@@ -56,6 +59,16 @@ export default function SpotifyConnectPlayer({
     started.current = true;
     command("/api/spotify/play", { recordingId: recording.id }).then(setError);
   }, [autoplay, connected, command, recording.id]);
+
+  // Asked to play the whole recording: once per request, once connected.
+  const playedRequest = useRef(0);
+  useEffect(() => {
+    if (!playRequest || !connected || playedRequest.current === playRequest) {
+      return;
+    }
+    playedRequest.current = playRequest;
+    command("/api/spotify/play", { recordingId: recording.id }).then(setError);
+  }, [playRequest, connected, command, recording.id]);
 
   // …and move on once Spotify has played one of its tracks and left them
   // (the album went on). Unknown for a whole album without movement tracks.

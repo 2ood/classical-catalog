@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import PlayerSync from "./PlayerSync";
+import PlayerSync, { useMovementRequests } from "./PlayerSync";
 import RecordingsPane from "./RecordingsPane";
 import SpotifyPlaybackProvider from "./SpotifyPlayback";
 import YouTubeDockProvider from "./YouTubeDock";
@@ -46,6 +46,10 @@ function renderPane(queue: Queue | null = null, initialRecordingId?: string) {
 
 const editButton = (performer: string) =>
   screen.getByRole("button", { name: `Edit the recording by ${performer}` });
+const avatar = (performer: string) =>
+  screen.getByRole("button", {
+    name: new RegExp(`^Play Ballade No. 1 by ${performer}`),
+  });
 const forms = () => screen.queryAllByRole("button", { name: "Save" });
 
 beforeEach(() => {
@@ -79,7 +83,7 @@ describe("RecordingsPane editing", () => {
   it("closes the editor when another recording is chosen", () => {
     renderPane();
     fireEvent.click(editButton("Seong-Jin Cho"));
-    fireEvent.click(screen.getByRole("button", { name: /^Krystian Zimerman/ }));
+    fireEvent.click(avatar("Krystian Zimerman"));
     expect(forms()).toHaveLength(0);
   });
 
@@ -105,12 +109,49 @@ describe("RecordingsPane editing", () => {
   });
 });
 
+/** Stand-in for the score pane: records the movements it is sent to. */
+function Score({ onRequest }: { onRequest: (id: string) => void }) {
+  useMovementRequests("score", onRequest);
+  return null;
+}
+
+describe("RecordingsPane playing a movement", () => {
+  it("switches to another recording's movement, and both panes go there", async () => {
+    const onRequest = vi.fn();
+    const withMovement = (r: Recording) => ({
+      ...r,
+      movementStarts: {
+        m1: "https://open.spotify.com/track/0eBr9W1GE5nou99gRdy02J",
+      },
+    });
+    render(
+      <SpotifyPlaybackProvider>
+        <YouTubeDockProvider>
+          <PlayerSync movements={[{ id: "m1", name: "Andante spianato" }]}>
+            <RecordingsPane
+              workId="w1"
+              recordings={[withMovement(cho), withMovement(zimerman)]}
+              workTitle="Grande Polonaise"
+              query="Chopin Op. 22"
+            />
+            <Score onRequest={onRequest} />
+          </PlayerSync>
+        </YouTubeDockProvider>
+      </SpotifyPlaybackProvider>,
+    );
+    const zimermanM1 = screen.getByRole("button", {
+      name: /^Play I\. Andante spianato by Krystian Zimerman/,
+    });
+    fireEvent.click(zimermanM1);
+    expect(zimermanM1).toHaveAttribute("aria-current", "true");
+    await vi.waitFor(() => expect(onRequest).toHaveBeenCalledWith("m1"));
+  });
+});
+
 describe("RecordingsPane opened at a recording", () => {
   it("shows that recording first (e.g. from the Liked page)", () => {
     renderPane(null, "r2");
-    expect(
-      screen.getByRole("button", { name: /^Krystian Zimerman/ }),
-    ).toHaveAttribute("aria-expanded", "true");
+    expect(avatar("Krystian Zimerman")).toHaveAttribute("aria-current", "true");
   });
 });
 
@@ -154,9 +195,7 @@ describe("RecordingsPane playing through a performer", () => {
 
   it("picks the performer's recording and shows where the queue is", () => {
     renderPane(queue);
-    expect(
-      screen.getByRole("button", { name: /^Krystian Zimerman/ }),
-    ).toHaveAttribute("aria-expanded", "true");
+    expect(avatar("Krystian Zimerman")).toHaveAttribute("aria-current", "true");
     expect(screen.getByText("· 2 / 4", { exact: false })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Previous work" })).toHaveAttribute(
       "href",

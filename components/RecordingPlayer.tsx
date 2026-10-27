@@ -1,12 +1,18 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffectEvent, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useMovementRequests, usePlayerSync } from "./PlayerSync";
 import RecordingMovementEditor from "./RecordingMovementEditor";
 import SpotifyConnectPlayer from "./SpotifyConnectPlayer";
 import { shouldLoad, useYouTube, useYouTubeEvents } from "./YouTubeDock";
-import { extractYouTubeId } from "@/lib/media";
+import { extractYouTubeId, youTubeStart } from "@/lib/media";
 import {
   currentMovementIndex,
   placeMovements,
@@ -27,6 +33,7 @@ export default function RecordingPlayer({
   workTitle,
   chosen = false,
   autoplay = false,
+  playRequest = 0,
   onEnded,
 }: {
   recording: Recording;
@@ -36,6 +43,8 @@ export default function RecordingPlayer({
   chosen?: boolean;
   /** Start playing on arrival (playing through a performer). */
   autoplay?: boolean;
+  /** Raised to play the whole recording from its start (the list's avatar). */
+  playRequest?: number;
   /** The recording reached its end. */
   onEnded?: () => void;
 }) {
@@ -60,6 +69,8 @@ export default function RecordingPlayer({
       ? extractYouTubeId(recording.mediaUrl)
       : null;
   const holding = !!videoId && docked?.recordingId === recording.id;
+  // Where the piece starts in the video (a `t=` link, e.g. into a concert).
+  const pieceStart = youTubeStart(recording.mediaUrl) ?? undefined;
 
   const startOf = (movementId: string | undefined) => {
     const start = movementId ? starts[movementId] : undefined;
@@ -90,10 +101,25 @@ export default function RecordingPlayer({
       recordingId: docked.recordingId,
       status,
     };
-    if (shouldLoad(loaded, recording.id, chosen)) loadHere(start, autoplay);
+    if (shouldLoad(loaded, recording.id, chosen)) {
+      loadHere(start ?? pieceStart, autoplay);
+    }
   });
   // Before paint, so the "Play here" placeholder doesn't flash.
   useLayoutEffect(() => arrive(), []);
+
+  const playWhole = useEffectEvent(() => {
+    if (!videoId) return;
+    if (holding) {
+      seekTo(pieceStart ?? 0);
+      play();
+    } else {
+      loadHere(pieceStart, true);
+    }
+  });
+  useEffect(() => {
+    if (playRequest) playWhole();
+  }, [playRequest]);
 
   useMovementRequests("recording", (movementId) => {
     if (request?.seq === arrivalSeq.current) return;
@@ -155,6 +181,7 @@ export default function RecordingPlayer({
           <SpotifyConnectPlayer
             recording={recording}
             autoplay={autoplay}
+            playRequest={playRequest}
             onEnded={onEnded}
           />
         ) : holding ? (
@@ -165,7 +192,7 @@ export default function RecordingPlayer({
             {docked && <p>Playing: {docked.title}</p>}
             <button
               type="button"
-              onClick={() => loadHere(undefined, true)}
+              onClick={() => loadHere(pieceStart, true)}
               className="px-2 py-0.5 border border-border text-text hover:bg-surface"
             >
               ▶ Play this recording here

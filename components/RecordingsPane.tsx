@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AddRecordingForm from "./AddRecordingForm";
+import { usePlayerSync } from "./PlayerSync";
 import RecordingList from "./RecordingList";
 import QueueBar, { type Queue } from "./QueueBar";
 import RecordingPlayer from "./RecordingPlayer";
@@ -54,6 +55,37 @@ export default function RecordingsPane({
   const editing = recordings.find((r) => r.id === editingId);
   const [error, setError] = useState<string | null>(null);
   const selected = recordings.find((r) => r.id === selectedId) ?? recordings[0];
+  const { select } = usePlayerSync();
+  // An avatar asked to play its whole recording (raised per ask).
+  const [wholeRequest, setWholeRequest] = useState<{
+    recordingId: string;
+    seq: number;
+  } | null>(null);
+  // A movement to play once the newly chosen recording's player is there.
+  const pendingMovement = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pendingMovement.current) return;
+    select(pendingMovement.current, "link");
+    pendingMovement.current = null;
+  }, [selected?.id, select]);
+
+  function handlePlay(id: string, movementId: string | null) {
+    setChosen(true);
+    setEditingId(null);
+    if (movementId === null) {
+      setSelectedId(id);
+      setWholeRequest((w) => ({ recordingId: id, seq: (w?.seq ?? 0) + 1 }));
+      return;
+    }
+    setWholeRequest(null);
+    if (id === selected?.id) {
+      // Both panes follow: the score turns, the recording plays.
+      select(movementId, "link");
+    } else {
+      setSelectedId(id);
+      pendingMovement.current = movementId;
+    }
+  }
 
   async function handleDelete(id: string) {
     const recording = recordings.find((r) => r.id === id);
@@ -93,18 +125,14 @@ export default function RecordingsPane({
         </button>
       </div>
       {recordings.length > 0 && (
-        <div className="shrink-0 max-h-[45%] overflow-auto">
+        <div className="shrink-0 max-h-[45%] overflow-y-auto overflow-x-hidden">
           <RecordingList
             recordings={recordings}
             selectedId={selected?.id}
             workTitle={workTitle}
             performers={performers}
             likes={likes}
-            onSelect={(id) => {
-              setSelectedId(id);
-              setChosen(true);
-              setEditingId(null);
-            }}
+            onPlay={handlePlay}
             onDelete={handleDelete}
             onEdit={(id) => {
               setAdding(false);
@@ -139,6 +167,9 @@ export default function RecordingsPane({
           recording={selected}
           workTitle={workTitle}
           chosen={chosen}
+          playRequest={
+            wholeRequest?.recordingId === selected.id ? wholeRequest.seq : 0
+          }
           {...(queue?.recordingId === selected.id && {
             autoplay: true,
             onEnded: () => queue.next && router.push(queue.next),
