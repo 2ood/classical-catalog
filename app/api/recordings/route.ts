@@ -3,12 +3,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { parseMovementStarts } from "@/lib/movements";
 import { linkPerformers } from "@/lib/performer-store";
+import { freeRecordingSlug } from "@/lib/recording-store";
 import { parseRecordingInput } from "@/lib/recordings";
 import { recordings, works } from "@/lib/schema";
 
 /**
  * Adds a recording; `movementStarts` (`{ movementId: track or seconds }`,
- * optional) saves where each of the work's movements starts in one go.
+ * optional) saves where each of the work's movements starts in one go;
+ * `movementId` (optional) makes it a recording of that movement alone.
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -24,6 +26,10 @@ export async function POST(request: Request) {
   if (!work) {
     return NextResponse.json({ error: "Work not found" }, { status: 404 });
   }
+  const { movementId } = parsed.value;
+  if (movementId && !work.movements.some((m) => m.id === movementId)) {
+    return NextResponse.json({ error: "Unknown movement" }, { status: 400 });
+  }
   const starts = parseMovementStarts(
     body.movementStarts,
     parsed.value.mediaType,
@@ -35,7 +41,15 @@ export async function POST(request: Request) {
 
   const [recording] = await db
     .insert(recordings)
-    .values({ ...parsed.value, movementStarts: starts.value })
+    .values({
+      ...parsed.value,
+      slug: await freeRecordingSlug(
+        work.id,
+        parsed.value.performer,
+        parsed.value.year,
+      ),
+      movementStarts: starts.value,
+    })
     .returning();
   await linkPerformers(db, recording.id, recording.performer);
   return NextResponse.json(recording, { status: 201 });

@@ -1,5 +1,15 @@
 import "server-only";
-import { asc, count, countDistinct, eq, isNotNull, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  countDistinct,
+  eq,
+  isNotNull,
+  like,
+  sql,
+} from "drizzle-orm";
+import { byVideo, isConcert, spanEnds } from "./concerts";
 import { db } from "./db";
 import {
   composerSchools,
@@ -11,6 +21,7 @@ import {
   recordings,
   works,
 } from "./schema";
+import { searchWords } from "./works";
 
 /**
  * All composers with the number of their works that have ≥1 recording,
@@ -196,12 +207,42 @@ export async function getWorkLikes(
   return byRecording;
 }
 
+/**
+ * Where each of a work's YouTube recordings ends in its video: its own end,
+ * else where the video's next piece (of any work) starts.
+ */
+export async function getSpanEnds(
+  workId: string,
+): Promise<Record<string, number | null>> {
+  const all = await db
+    .select({
+      id: recordings.id,
+      workId: recordings.workId,
+      mediaType: recordings.mediaType,
+      mediaUrl: recordings.mediaUrl,
+      startSeconds: recordings.startSeconds,
+      endSeconds: recordings.endSeconds,
+    })
+    .from(recordings)
+    .where(eq(recordings.mediaType, "youtube"));
+  const ends: Record<string, number | null> = {};
+  for (const spans of byVideo(all).values()) {
+    if (!spans.some((s) => s.workId === workId)) continue;
+    Object.assign(ends, spanEnds(spans));
+  }
+  return ends;
+}
+
 /** Every like with its recording, work and composer, for the Liked page. */
 export function getLikes() {
   return db
     .select({
       movementId: likedTracks.movementId,
-      recording: { id: recordings.id, performer: recordings.performer },
+      recording: {
+        id: recordings.id,
+        performer: recordings.performer,
+        slug: recordings.slug,
+      },
       composer: {
         slug: composers.slug,
         name: composers.name,
@@ -218,4 +259,81 @@ export function getLikes() {
     .innerJoin(recordings, eq(recordings.id, likedTracks.recordingId))
     .innerJoin(works, eq(works.id, recordings.workId))
     .innerJoin(composers, eq(composers.id, works.composerId));
+}
+
+/**
+ * Works of any composer whose slugs hold every word of the search (see
+ * searchWords), at most 20: for picking a concert piece's work.
+ */
+export function searchWorks(query: string) {
+  const words = searchWords(query);
+  const haystack = sql`replace(${composers.slug} || ${works.slug}, '-', '')`;
+  return db
+    .select({
+      id: works.id,
+      title: works.title,
+      catalogueNum: works.catalogueNum,
+      key: works.key,
+      movements: works.movements,
+      composer: composers.name,
+    })
+    .from(works)
+    .innerJoin(composers, eq(composers.id, works.composerId))
+    .where(and(...words.map((w) => sql`${haystack} like ${`%${w}%`}`)))
+    .orderBy(asc(composers.born), asc(works.title))
+    .limit(words.length ? 20 : 0);
+}
+
+// A YouTube recording as a piece of its video, with its work.
+const concertPiece = {
+  id: recordings.id,
+  workId: recordings.workId,
+  performer: recordings.performer,
+  year: recordings.year,
+  mediaType: recordings.mediaType,
+  mediaUrl: recordings.mediaUrl,
+  startSeconds: recordings.startSeconds,
+  endSeconds: recordings.endSeconds,
+  movementId: recordings.movementId,
+  slug: recordings.slug,
+  movementStarts: recordings.movementStarts,
+  createdAt: recordings.createdAt,
+  work: {
+    title: works.title,
+    catalogueNum: works.catalogueNum,
+    slug: works.slug,
+    movements: works.movements,
+  },
+  composer: { name: composers.name, slug: composers.slug },
+};
+
+function concertPieces(videoId?: string) {
+  return db
+    .select(concertPiece)
+    .from(recordings)
+    .innerJoin(works, eq(works.id, recordings.workId))
+    .innerJoin(composers, eq(composers.id, works.composerId))
+    .where(
+      and(
+        eq(recordings.mediaType, "youtube"),
+        videoId ? like(recordings.mediaUrl, `%${videoId}%`) : undefined,
+      ),
+    );
+}
+
+export type ConcertPiece = Awaited<ReturnType<typeof concertPieces>>[number];
+
+/** The pieces of one video. */
+export async function getConcert(videoId: string): Promise<ConcertPiece[]> {
+  return byVideo(await concertPieces(videoId)).get(videoId) ?? [];
+}
+
+/** Every video that is a concert (see isConcert), the latest mapped first. */
+export async function getConcerts() {
+  const latest = (pieces: ConcertPiece[]) =>
+    Math.max(...pieces.map((p) => p.createdAt?.getTime() ?? 0));
+  return [...byVideo(await concertPieces())]
+    .filter(([, pieces]) => isConcert(pieces))
+    .map(([videoId, pieces]) => ({ videoId, pieces }))
+    .sort((a, b) => latest(b.pieces) - latest(a.pieces));
 }

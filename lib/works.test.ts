@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareCatalogue, groupByGenre } from "./works";
+import { compareCatalogue, groupByGenre, searchWords } from "./works";
 
 describe("compareCatalogue", () => {
   const sorted = (nums: (string | null)[]) => [...nums].sort(compareCatalogue);
@@ -76,5 +76,16 @@ describe("groupByGenre", () => {
 
   it("returns no groups for no works", () => {
     expect(groupByGenre([])).toEqual([]);
+  });
+});
+
+describe("searchWords", () => {
+  it.each([
+    ["Klavierstücke Op.118", ["klavierstucke", "op", "118"]],
+    ["  k550 ", ["k550"]],
+    ["Brahms, Intermezzo", ["brahms", "intermezzo"]],
+    ["", []],
+  ])("%j → %j", (query, words) => {
+    expect(searchWords(query)).toEqual(words);
   });
 });

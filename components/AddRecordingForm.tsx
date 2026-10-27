@@ -2,9 +2,14 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import PerformerInput from "./PerformerInput";
 import { usePlayerSync } from "./PlayerSync";
-import { extractSpotifyId, extractYouTubeId } from "@/lib/media";
-import { movementLabel } from "@/lib/movements";
+import { extractSpotifyId, extractYouTubeId, youTubeStart } from "@/lib/media";
+import {
+  formatTimestamp,
+  movementLabel,
+  parseTimestamp,
+} from "@/lib/movements";
 import type { Recording } from "@/lib/schema";
 import type { RecordingPreview } from "@/lib/suggestions";
 
@@ -64,6 +69,11 @@ export default function AddRecordingForm({
     recording?.mediaType ?? (spotifyLink(initialUrl) ? "spotify" : "youtube"),
   );
   const [url, setUrl] = useState(startUrl);
+  // Where the piece starts and ends in a YouTube video (m:ss), e.g. a concert.
+  const time = (s: number | null | undefined) =>
+    s == null ? "" : formatTimestamp(s);
+  const [start, setStart] = useState(time(recording?.startSeconds));
+  const [end, setEnd] = useState(time(recording?.endSeconds));
   // Spotify's answer, for the link it was asked about.
   const [answer, setAnswer] = useState<(Answer & { link: string }) | null>(
     null,
@@ -71,6 +81,11 @@ export default function AddRecordingForm({
   const [starts, setStarts] = useState<Record<string, string>>(savedTracks);
   // A single piece (no movements): the album's track that is the work.
   const [pieceLink, setPieceLink] = useState(recording ? startUrl : "");
+  // The one movement it is a recording of ("": the whole work).
+  const [only, setOnly] = useState(recording?.movementId ?? "");
+  const shownMovements = only
+    ? movements.filter((m) => m.id === only)
+    : movements;
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -118,24 +133,45 @@ export default function AddRecordingForm({
   function handleUrl(next: string) {
     setUrl(next);
     if (extractSpotifyId(next)) setMediaType("spotify");
-    else if (extractYouTubeId(next)) setMediaType("youtube");
+    else if (extractYouTubeId(next)) {
+      setMediaType("youtube");
+      const linked = youTubeStart(next);
+      if (linked !== null) setStart(formatTimestamp(linked));
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const seconds = (text: string) =>
+      text.trim() === "" ? null : parseTimestamp(text);
+    const span =
+      mediaType === "youtube"
+        ? { startSeconds: seconds(start), endSeconds: seconds(end) }
+        : {};
+    if (
+      (start.trim() && span.startSeconds === null) ||
+      (end.trim() && span.endSeconds === null)
+    ) {
+      setError("Write the start and end as m:ss, e.g. 12:34");
+      return;
+    }
     setPending(true);
     setError(null);
     const ready = preview.status === "ready" ? preview.data : null;
     const tracks = Object.fromEntries(
-      Object.entries(starts).filter(([, t]) => t),
+      Object.entries(starts).filter(([m, t]) => t && (!only || m === only)),
     );
-    // Editing keeps what it can't show (YouTube times, or tracks while
-    // Spotify isn't reachable); adding starts from what was matched.
-    const movementStarts = recording
-      ? mediaType === "spotify" && ready
-        ? { movementStarts: tracks }
-        : {}
-      : { movementStarts: ready ? tracks : {} };
+    // One movement of a video starts where the video (or its span) does.
+    // Otherwise editing keeps what it can't show (YouTube times, or tracks
+    // while Spotify isn't reachable); adding starts from what was matched.
+    const movementStarts =
+      only && mediaType === "youtube"
+        ? { movementStarts: { [only]: span.startSeconds ?? 0 } }
+        : recording
+          ? mediaType === "spotify" && ready
+            ? { movementStarts: tracks }
+            : {}
+          : { movementStarts: ready ? tracks : {} };
     const res = await fetch(
       recording ? `/api/recordings/${recording.id}` : "/api/recordings",
       {
@@ -149,8 +185,10 @@ export default function AddRecordingForm({
           mediaUrl: ready
             ? movements.length === 0
               ? pieceLink || ready.mediaUrl
-              : ready.mediaUrl
+              : (only && tracks[only]) || ready.mediaUrl
             : url,
+          ...span,
+          movementId: only || null,
           ...movementStarts,
         }),
       },
@@ -175,12 +213,11 @@ export default function AddRecordingForm({
       className="flex flex-col gap-2 text-sm"
     >
       <div className="flex flex-wrap gap-2 items-center">
-        <input
-          placeholder="Performer"
+        <PerformerInput
           required
           value={performer}
-          onChange={(e) => setPerformer(e.target.value)}
-          className={input}
+          onChange={setPerformer}
+          className="w-56"
         />
         <input
           placeholder="Year"
@@ -189,6 +226,21 @@ export default function AddRecordingForm({
           onChange={(e) => setYear(e.target.value)}
           className={`${input} w-20`}
         />
+        {movements.length > 1 && (
+          <select
+            aria-label="Movement"
+            value={only}
+            onChange={(e) => setOnly(e.target.value)}
+            className={`${input} max-w-56`}
+          >
+            <option value="">Whole work</option>
+            {movements.map((m, i) => (
+              <option key={m.id} value={m.id}>
+                {movementLabel(m, i)}
+              </option>
+            ))}
+          </select>
+        )}
         <select
           aria-label="Media type"
           value={mediaType}
@@ -224,6 +276,34 @@ export default function AddRecordingForm({
           </button>
         )}
       </div>
+      {mediaType === "youtube" && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <label className="flex items-center gap-2">
+            <span className="text-muted">Start</span>
+            <input
+              aria-label="Start"
+              placeholder="0:00"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              className={`${input} w-24`}
+            />
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="text-muted">End</span>
+            <input
+              aria-label="End"
+              placeholder="m:ss"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+              className={`${input} w-24`}
+            />
+          </label>
+          <span className="text-xs text-muted">
+            Within a longer video, e.g. a concert; with no end it stops at the
+            next piece
+          </span>
+        </div>
+      )}
       {preview.status === "loading" && (
         <p className="text-muted">Reading the album from Spotify…</p>
       )}
@@ -265,8 +345,8 @@ export default function AddRecordingForm({
       )}
       {movements.length > 0 && tracks.length > 0 && (
         <div className="flex flex-col gap-1">
-          {movements.map((m, i) => {
-            const label = movementLabel(m, i);
+          {shownMovements.map((m) => {
+            const label = movementLabel(m, movements.indexOf(m));
             return (
               <label key={m.id} className="flex items-center gap-2">
                 <span className="w-56 shrink-0 truncate text-muted">

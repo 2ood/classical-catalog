@@ -86,11 +86,59 @@ describe("AddRecordingForm", () => {
       year: "1990",
       mediaType: "youtube",
       mediaUrl: "https://youtu.be/dQw4w9WgXcQ",
+      startSeconds: null,
+      endSeconds: null,
+      movementId: null,
       movementStarts: {},
     });
     expect(
       vi.mocked(fetch).mock.calls.some(([u]) => String(u).includes("preview")),
     ).toBe(false);
+  });
+
+  it("takes a pasted link's timestamp as the start, with an end if given", async () => {
+    serve(Response.json(preview));
+    renderForm();
+    fireEvent.change(screen.getByPlaceholderText("Performer"), {
+      target: { value: "Horowitz" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("URL"), {
+      target: { value: "https://youtu.be/dQw4w9WgXcQ?t=754" },
+    });
+    expect(screen.getByLabelText("Start")).toHaveValue("12:34");
+    fireEvent.change(screen.getByLabelText("End"), {
+      target: { value: "21:30" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "+ Add" }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(posted()).toMatchObject({ startSeconds: 754, endSeconds: 1290 });
+  });
+
+  it("refuses a start or end it can't read", async () => {
+    serve(Response.json(preview));
+    renderForm();
+    fireEvent.change(screen.getByPlaceholderText("Performer"), {
+      target: { value: "Horowitz" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("URL"), {
+      target: { value: "https://youtu.be/dQw4w9WgXcQ" },
+    });
+    fireEvent.change(screen.getByLabelText("End"), {
+      target: { value: "soon" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "+ Add" }));
+    expect(
+      await screen.findByText("Write the start and end as m:ss, e.g. 12:34"),
+    ).toBeInTheDocument();
+    expect(
+      vi.mocked(fetch).mock.calls.some(([u]) => u === "/api/recordings"),
+    ).toBe(false);
+  });
+
+  it("has no start or end for Spotify", () => {
+    serve(Response.json(preview));
+    renderForm(ALBUM);
+    expect(screen.queryByLabelText("Start")).toBeNull();
   });
 
   it("fills in a pasted Spotify album and matches its tracks to movements", async () => {
@@ -191,6 +239,64 @@ describe("AddRecordingForm", () => {
     expect(posted()).toMatchObject({ mediaUrl: T(3), movementStarts: {} });
   });
 
+  it("adds a YouTube video of one movement", async () => {
+    serve(Response.json(preview));
+    renderForm();
+    fireEvent.change(screen.getByPlaceholderText("Performer"), {
+      target: { value: "Paik" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Movement" }), {
+      target: { value: "m2" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("URL"), {
+      target: { value: "https://youtu.be/dQw4w9WgXcQ" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "+ Add" }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(posted()).toMatchObject({
+      mediaUrl: "https://youtu.be/dQw4w9WgXcQ",
+      startSeconds: null,
+      movementId: "m2",
+      // It starts where the video (or its span) does.
+      movementStarts: { m2: 0 },
+    });
+  });
+
+  it("adds one movement's track from a Spotify album", async () => {
+    serve(Response.json(preview));
+    renderForm();
+    fireEvent.change(screen.getByRole("combobox", { name: "Movement" }), {
+      target: { value: "m1" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("URL"), {
+      target: { value: ALBUM },
+    });
+    expect(
+      await screen.findByRole("combobox", {
+        name: "Track for I. Intermezzo in a-Moll",
+      }),
+    ).toHaveValue(T(1));
+    // Only the movement's own track.
+    expect(
+      screen.queryByRole("combobox", {
+        name: "Track for II. Intermezzo in A-Dur",
+      }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "+ Add" }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(posted()).toMatchObject({
+      mediaType: "spotify",
+      mediaUrl: T(1),
+      movementId: "m1",
+      movementStarts: { m1: T(1) },
+    });
+  });
+
+  it("has no movement to choose for a work of one movement", () => {
+    renderForm(undefined, [movements[0]]);
+    expect(screen.queryByRole("combobox", { name: "Movement" })).toBeNull();
+  });
+
   it("can keep the whole album for a single piece", async () => {
     serve(Response.json({ ...preview, mediaUrl: ALBUM, movementStarts: {} }));
     renderForm(undefined, []);
@@ -265,6 +371,7 @@ describe("AddRecordingForm", () => {
           year: "2016",
           mediaType: "spotify",
           mediaUrl: ALBUM,
+          movementId: null,
           movementStarts: { m1: T(3), m2: T(2) },
         },
       });
@@ -277,10 +384,39 @@ describe("AddRecordingForm", () => {
         mediaType: "youtube",
         mediaUrl: "https://youtu.be/dQw4w9WgXcQ",
         movementStarts: { m1: 0, m2: 312 },
+        startSeconds: 79,
+        endSeconds: null,
       } as unknown as Recording);
+      expect(screen.getByLabelText("Start")).toHaveValue("1:19");
       fireEvent.click(screen.getByRole("button", { name: "Save" }));
       await waitFor(() => expect(refresh).toHaveBeenCalled());
       expect(patched().body).not.toHaveProperty("movementStarts");
+      expect(patched().body).toMatchObject({
+        startSeconds: 79,
+        endSeconds: null,
+      });
+    });
+
+    it("starts from the movement it is a recording of, and can change it", async () => {
+      serve(Response.json(preview));
+      renderEdit({
+        ...existing,
+        mediaType: "youtube",
+        mediaUrl: "https://youtu.be/dQw4w9WgXcQ",
+        movementId: "m2",
+        movementStarts: { m2: 0 },
+        startSeconds: null,
+        endSeconds: null,
+      } as unknown as Recording);
+      const movement = screen.getByRole("combobox", { name: "Movement" });
+      expect(movement).toHaveValue("m2");
+      fireEvent.change(movement, { target: { value: "m1" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(refresh).toHaveBeenCalled());
+      expect(patched().body).toMatchObject({
+        movementId: "m1",
+        movementStarts: { m1: 0 },
+      });
     });
   });
 });

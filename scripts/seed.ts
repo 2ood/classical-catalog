@@ -2,7 +2,8 @@ import { loadEnvConfig } from "@next/env";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { composers, recordings, works } from "../lib/schema";
-import { slugify, workSlug } from "../lib/slugs";
+import { recordingSlug } from "../lib/recordings";
+import { slugify, uniqueSlug, workSlug } from "../lib/slugs";
 
 loadEnvConfig(process.cwd());
 const client = postgres(process.env.DATABASE_URL!);
@@ -140,9 +141,14 @@ async function main() {
         .values({ ...work, slug: workSlug(work), composerId: composer.id })
         .returning({ id: works.id });
       if (recs.length > 0) {
-        await db
-          .insert(recordings)
-          .values(recs.map((r) => ({ ...r, workId: inserted.id })));
+        const taken = new Set<string>();
+        await db.insert(recordings).values(
+          recs.map((r) => {
+            const slug = uniqueSlug(recordingSlug(r.performer, r.year), taken);
+            taken.add(slug);
+            return { ...r, slug, workId: inserted.id };
+          }),
+        );
       }
     }
   }

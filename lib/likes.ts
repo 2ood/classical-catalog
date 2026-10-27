@@ -26,7 +26,7 @@ export function parseLike(
 
 type LikedRow = {
   movementId: string;
-  recording: { id: string; performer: string };
+  recording: { id: string; performer: string; slug: string };
   composer: { slug: string; name: string; born: number | null };
   work: {
     slug: string;
@@ -44,7 +44,7 @@ type LikedRow = {
 export function likedList(rows: LikedRow[]) {
   const entries = rows.flatMap((row) => {
     const workPath = `/composer/${row.composer.slug}/${row.work.slug}`;
-    const query = `?recording=${row.recording.id}`;
+    const query = `?recording=${row.recording.slug}`;
     const work = [row.work.catalogueNum, row.work.title]
       .filter(Boolean)
       .join(" ");

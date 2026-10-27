@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { youTubeStart } from "@/lib/media";
 import { parseMovementStarts } from "@/lib/movements";
 import { linkPerformers } from "@/lib/performer-store";
+import { freeRecordingSlug } from "@/lib/recording-store";
 import { parseRecordingInput, UUID } from "@/lib/recordings";
 import { recordings, works } from "@/lib/schema";
 
@@ -32,9 +34,11 @@ export async function DELETE(
 }
 
 /**
- * Edits a recording: performer, year, link, and (optional) movement starts.
- * Without movement starts the old ones stay — unless the media type changed,
- * since tracks and times don't carry over.
+ * Edits a recording: performer, year, link, and (optional) movement starts,
+ * start and end. Without movement starts the old ones stay — unless the
+ * media type changed, since tracks and times don't carry over; likewise a
+ * start or end not sent (and no `t=` in the link) stays, as does the
+ * movement it is a recording of.
  */
 export async function PATCH(
   request: Request,
@@ -57,6 +61,13 @@ export async function PATCH(
     .select({
       mediaType: recordings.mediaType,
       movementStarts: recordings.movementStarts,
+      startSeconds: recordings.startSeconds,
+      endSeconds: recordings.endSeconds,
+      movementId: recordings.movementId,
+      workId: recordings.workId,
+      performer: recordings.performer,
+      year: recordings.year,
+      slug: recordings.slug,
       movements: works.movements,
     })
     .from(recordings)
@@ -82,9 +93,40 @@ export async function PATCH(
   }
 
   const { performer, year, mediaUrl } = parsed.value;
+  const same = mediaType === existing.mediaType;
+  const startSeconds =
+    same && body.startSeconds === undefined && !youTubeStart(body.mediaUrl)
+      ? existing.startSeconds
+      : parsed.value.startSeconds;
+  const endSeconds =
+    same && body.endSeconds === undefined
+      ? existing.endSeconds
+      : parsed.value.endSeconds;
+  const movementId =
+    body.movementId === undefined
+      ? existing.movementId
+      : parsed.value.movementId;
+  if (movementId && !existing.movements.some((m) => m.id === movementId)) {
+    return NextResponse.json({ error: "Unknown movement" }, { status: 400 });
+  }
+  // Renamed with its performer or year (links by the old slug stop working).
+  const slug =
+    performer === existing.performer && year === existing.year
+      ? existing.slug
+      : await freeRecordingSlug(existing.workId!, performer, year, id);
   const [updated] = await db
     .update(recordings)
-    .set({ performer, year, mediaType, mediaUrl, movementStarts })
+    .set({
+      performer,
+      year,
+      mediaType,
+      mediaUrl,
+      movementStarts,
+      startSeconds,
+      endSeconds,
+      movementId,
+      slug,
+    })
     .where(eq(recordings.id, id))
     .returning();
   await linkPerformers(db, id, performer);

@@ -49,6 +49,16 @@ export function youTubeStart(input: string): number | null {
   return seconds > 0 ? seconds : null;
 }
 
+/** The link without its start (`t=`, `#t=`, `start=`); kept as given if not a URL. */
+export function withoutYouTubeStart(input: string): string {
+  const url = parseUrl(input);
+  if (!url) return input.trim();
+  url.searchParams.delete("t");
+  url.searchParams.delete("start");
+  if (new URLSearchParams(url.hash.slice(1)).has("t")) url.hash = "";
+  return url.toString();
+}
+
 export function extractSpotifyId(
   input: string,
 ): { type: SpotifyType; id: string } | null {

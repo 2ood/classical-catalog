@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePlayerSync } from "./PlayerSync";
 import { useSpotifyPlayback } from "./SpotifyPlayback";
+import { extractYouTubeId } from "@/lib/media";
 import { movementLabel } from "@/lib/movements";
 import { performerInitials } from "@/lib/recordings";
 import type { Recording } from "@/lib/schema";
@@ -54,6 +55,11 @@ export default function RecordingList({
   const { playback } = useSpotifyPlayback();
   const selected = recordings.find((r) => r.id === selectedId);
   const liked = likes[selectedId ?? ""] ?? [];
+  // The selected recording's video, mapped piece by piece on its concert page.
+  const videoId =
+    selected?.mediaType === "youtube"
+      ? extractYouTubeId(selected.mediaUrl)
+      : null;
 
   const loaded = playback?.connected ? playback.state : null;
   const rows: Row[] =
@@ -79,15 +85,18 @@ export default function RecordingList({
             label: "Whole work",
             movementId: null,
             likeId: null,
-            recordings,
+            // A recording of one movement is on that movement's row only.
+            recordings: recordings.filter((r) => !r.movementId),
             playing: false,
           },
           ...movements.map((m, i) => ({
             label: movementLabel(m, i),
             movementId: m.id,
             likeId: m.id,
-            recordings: recordings.filter(
-              (r) => r.movementStarts[m.id] !== undefined,
+            recordings: recordings.filter((r) =>
+              r.movementId
+                ? r.movementId === m.id
+                : r.movementStarts[m.id] !== undefined,
             ),
             playing: current === m.id,
           })),
@@ -153,6 +162,14 @@ export default function RecordingList({
                 · {SOURCE[selected.mediaType]}
               </span>
             </span>
+            {videoId && (
+              <Link
+                href={`/concert/${videoId}`}
+                className="text-xs text-muted hover:text-text"
+              >
+                Open concert ↗
+              </Link>
+            )}
             <button
               type="button"
               aria-label={`Edit the recording by ${selected.performer}`}

@@ -92,6 +92,27 @@
       "when": 1792919630541,
       "tag": "0012_drop_liked_movements",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793066827371,
+      "tag": "0013_recording_span",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793076737657,
+      "tag": "0014_recording_movement",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1793077542922,
+      "tag": "0015_recording_slug",
+      "breakpoints": true
     }
   ]
 }

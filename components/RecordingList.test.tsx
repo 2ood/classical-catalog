@@ -15,6 +15,9 @@ const recording = (over: Partial<Recording>) =>
     year: 2016,
     mediaType: "spotify",
     mediaUrl: "https://open.spotify.com/album/0jvv6FS3zxUe56530Gjq4d",
+    startSeconds: null,
+    endSeconds: null,
+    movementId: null,
     movementStarts: {},
     ...over,
   }) as Recording;
@@ -101,6 +104,24 @@ describe("RecordingList", () => {
       { label: "Whole work", avatars: ["SC", "KZ"] },
       { label: "I. Allegro maestoso", avatars: ["SC", "KZ"] },
       { label: "II. Romance. Larghetto", avatars: ["SC"] },
+      { label: "III. Rondo. Vivace", avatars: [] },
+    ]);
+  });
+
+  it("shows a recording of one movement only on its row", () => {
+    // A video of just that movement: no start, no marks.
+    const horowitz = recording({
+      id: "r3",
+      performer: "Vladimir Horowitz",
+      mediaType: "youtube",
+      mediaUrl: "https://youtu.be/KCzCqXwGT_g",
+      movementId: "m2",
+    });
+    renderList({ recordings: [cho, zimerman, horowitz] });
+    expect(rows()).toEqual([
+      { label: "Whole work", avatars: ["SC", "KZ"] },
+      { label: "I. Allegro maestoso", avatars: ["SC", "KZ"] },
+      { label: "II. Romance. Larghetto", avatars: ["SC", "VH"] },
       { label: "III. Rondo. Vivace", avatars: [] },
     ]);
   });
@@ -215,6 +236,18 @@ describe("RecordingList", () => {
     expect(
       screen.getByRole("button", { name: "Like Ballade No. 1" }),
     ).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("opens a YouTube recording's video as a concert", () => {
+    renderList({ selectedId: "r2" });
+    expect(
+      screen.getByRole("link", { name: "Open concert ↗" }),
+    ).toHaveAttribute("href", "/concert/dQw4w9WgXcQ");
+  });
+
+  it("has no concert for a Spotify recording", () => {
+    renderList();
+    expect(screen.queryByRole("link", { name: "Open concert ↗" })).toBeNull();
   });
 
   it("edits and deletes the selected recording", () => {

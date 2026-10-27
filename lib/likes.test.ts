@@ -49,7 +49,7 @@ describe("likedList", () => {
     },
   };
   const rec = (id: string, performer: string) => ({
-    recording: { id, performer },
+    recording: { id, performer, slug: `${id}-slug` },
   });
 
   it("groups likes by composer, work and movement order, with their performers", () => {
@@ -71,17 +71,17 @@ describe("likedList", () => {
           {
             label: "Op. 67 Symphony No. 5 · I. Allegro con brio",
             performer: "Karajan / BPO",
-            href: "/composer/beethoven/symphony-no-5-op-67/i-allegro-con-brio?recording=r1",
+            href: "/composer/beethoven/symphony-no-5-op-67/i-allegro-con-brio?recording=r1-slug",
           },
           {
             label: "Op. 67 Symphony No. 5 · II. Andante con moto",
             performer: "Karajan / BPO",
-            href: "/composer/beethoven/symphony-no-5-op-67/ii-andante-con-moto?recording=r1",
+            href: "/composer/beethoven/symphony-no-5-op-67/ii-andante-con-moto?recording=r1-slug",
           },
           {
             label: "Op. 67 Symphony No. 5 · II. Andante con moto",
             performer: "Sir Simon Rattle / Berliner Philharmoniker",
-            href: "/composer/beethoven/symphony-no-5-op-67/ii-andante-con-moto?recording=r2",
+            href: "/composer/beethoven/symphony-no-5-op-67/ii-andante-con-moto?recording=r2-slug",
           },
         ],
       },
@@ -91,7 +91,7 @@ describe("likedList", () => {
           {
             label: "Op. 23 Ballade No. 1",
             performer: "Seong-Jin Cho",
-            href: "/composer/chopin/ballade-no-1-op-23?recording=r9",
+            href: "/composer/chopin/ballade-no-1-op-23?recording=r9-slug",
           },
         ],
       },

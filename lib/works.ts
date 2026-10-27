@@ -1,3 +1,5 @@
+import { slugify } from "./slugs";
+
 const collator = new Intl.Collator("en", {
   numeric: true,
   sensitivity: "base",
@@ -28,4 +30,14 @@ export function groupByGenre<T extends Groupable>(
           collator.compare(a.title, b.title),
       ),
     }));
+}
+
+/**
+ * A search as words of slugs, which are plain (no accents, lower case):
+ * "Klavierstücke Op.118" → ["klavierstucke", "op", "118"]; each word is
+ * looked for in a composer's and work's slugs with the hyphens removed,
+ * so "k550" finds "k-550".
+ */
+export function searchWords(query: string): string[] {
+  return slugify(query).split("-").filter(Boolean);
 }

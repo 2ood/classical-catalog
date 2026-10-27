@@ -58,20 +58,33 @@ export const works = pgTable(
   (t) => [unique().on(t.composerId, t.slug)],
 );
 
-export const recordings = pgTable("recordings", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  workId: uuid("work_id").references(() => works.id, { onDelete: "cascade" }),
-  performer: text("performer").notNull(),
-  year: integer("year"),
-  mediaType: text("media_type", { enum: ["youtube", "spotify"] }).notNull(),
-  mediaUrl: text("media_url").notNull(),
-  // Per movement id: start in seconds (YouTube) or a track URL (Spotify).
-  movementStarts: jsonb("movement_starts")
-    .$type<MovementMarks<number | string>>()
-    .notNull()
-    .default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+export const recordings = pgTable(
+  "recordings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workId: uuid("work_id").references(() => works.id, { onDelete: "cascade" }),
+    // In links to it: performer and year, unique within its work (see
+    // recordingSlug).
+    slug: text("slug").notNull(),
+    performer: text("performer").notNull(),
+    year: integer("year"),
+    mediaType: text("media_type", { enum: ["youtube", "spotify"] }).notNull(),
+    mediaUrl: text("media_url").notNull(),
+    // Where the piece starts and ends in a YouTube video (seconds), e.g. one
+    // piece of a concert; null for its beginning / end.
+    startSeconds: integer("start_seconds"),
+    endSeconds: integer("end_seconds"),
+    // The one movement it is a recording of; null for the whole work.
+    movementId: text("movement_id"),
+    // Per movement id: start in seconds (YouTube) or a track URL (Spotify).
+    movementStarts: jsonb("movement_starts")
+      .$type<MovementMarks<number | string>>()
+      .notNull()
+      .default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => [unique().on(t.workId, t.slug)],
+);
 
 export const scores = pgTable("scores", {
   id: uuid("id").primaryKey().defaultRandom(),

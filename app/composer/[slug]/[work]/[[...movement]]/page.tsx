@@ -13,6 +13,7 @@ import { movementSlugs } from "@/lib/slugs";
 import {
   getPerformer,
   getRecordingPerformers,
+  getSpanEnds,
   getWorkLikes,
 } from "@/lib/queries";
 import { orderForQueue, queueStep } from "@/lib/queue";
@@ -125,8 +126,10 @@ async function Player({
           performers={await getRecordingPerformers(work.id)}
           queue={queue}
           likes={await getWorkLikes(work.id)}
+          spanEnds={await getSpanEnds(work.id)}
           initialRecordingId={
-            typeof recording === "string" ? recording : undefined
+            // By slug; by id in links from before slugs.
+            recs.find((r) => r.slug === recording || r.id === recording)?.id
           }
           query={searchQuery(composer, work)}
         />

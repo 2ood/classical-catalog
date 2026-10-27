@@ -11,8 +11,14 @@ import {
 import { useMovementRequests, usePlayerSync } from "./PlayerSync";
 import RecordingMovementEditor from "./RecordingMovementEditor";
 import SpotifyConnectPlayer from "./SpotifyConnectPlayer";
-import { shouldLoad, useYouTube, useYouTubeEvents } from "./YouTubeDock";
-import { extractYouTubeId, youTubeStart } from "@/lib/media";
+import {
+  PlayModeToggle,
+  shouldLoad,
+  useYouTube,
+  useYouTubeEvents,
+} from "./YouTubeDock";
+import { extractYouTubeId } from "@/lib/media";
+import { trackJump, type Track } from "@/lib/playback";
 import {
   currentMovementIndex,
   placeMovements,
@@ -34,6 +40,7 @@ export default function RecordingPlayer({
   chosen = false,
   autoplay = false,
   playRequest = 0,
+  end = null,
   onEnded,
 }: {
   recording: Recording;
@@ -45,6 +52,8 @@ export default function RecordingPlayer({
   autoplay?: boolean;
   /** Raised to play the whole recording from its start (the list's avatar). */
   playRequest?: number;
+  /** Where its span of the video ends (e.g. at the next piece of a concert). */
+  end?: number | null;
   /** The recording reached its end. */
   onEnded?: () => void;
 }) {
@@ -57,20 +66,26 @@ export default function RecordingPlayer({
     play,
     currentTime,
     slot,
+    playMode,
   } = useYouTube();
   const pathname = usePathname();
   const lastMovement = useRef<string | null>(null);
   // The movement asked for on arrival (e.g. opened at a movement), not by ▶.
   const arrivalSeq = useRef(request?.seq);
   const [editing, setEditing] = useState(false);
-  const starts = recording.movementStarts;
   const videoId =
     recording.mediaType === "youtube"
       ? extractYouTubeId(recording.mediaUrl)
       : null;
   const holding = !!videoId && docked?.recordingId === recording.id;
-  // Where the piece starts in the video (a `t=` link, e.g. into a concert).
-  const pieceStart = youTubeStart(recording.mediaUrl) ?? undefined;
+  // Where the piece starts in the video, e.g. one piece of a concert.
+  const pieceStart = recording.startSeconds ?? undefined;
+  // A recording of one movement: that movement starts where the piece does.
+  const only = recording.movementId;
+  const starts =
+    videoId && only && recording.movementStarts[only] === undefined
+      ? { ...recording.movementStarts, [only]: pieceStart ?? 0 }
+      : recording.movementStarts;
 
   const startOf = (movementId: string | undefined) => {
     const start = movementId ? starts[movementId] : undefined;
@@ -83,9 +98,9 @@ export default function RecordingPlayer({
         recordingId: recording.id,
         videoId,
         title: `${workTitle} — ${recording.performer}`,
-        href: `${pathname}?recording=${recording.id}`,
+        href: `${pathname}?recording=${recording.slug}`,
       },
-      { start, autoplay: playNow },
+      { start, end: end ?? undefined, autoplay: playNow },
     );
   };
 
@@ -109,13 +124,9 @@ export default function RecordingPlayer({
   useLayoutEffect(() => arrive(), []);
 
   const playWhole = useEffectEvent(() => {
-    if (!videoId) return;
-    if (holding) {
-      seekTo(pieceStart ?? 0);
-      play();
-    } else {
-      loadHere(pieceStart, true);
-    }
+    // Loaded afresh even when held: a stop at the span's end doesn't
+    // survive seeking back.
+    if (videoId) loadHere(pieceStart, true);
   });
   useEffect(() => {
     if (playRequest) playWhole();
@@ -141,6 +152,17 @@ export default function RecordingPlayer({
       Object.entries(starts).filter(([, s]) => typeof s === "number"),
     ) as MovementMarks<number>,
   );
+  // Its tracks: each movement up to the next, the last up to the piece's
+  // end; or, without movement times, the piece itself.
+  const tracks: Track[] = times.length
+    ? times.map((m, i) => ({
+        id: m.id,
+        start: m.start,
+        end: times[i + 1]?.start ?? end,
+        stop: false,
+      }))
+    : [{ id: "", start: pieceStart ?? 0, end, stop: false }];
+  const playingTrack = useRef<string | null>(null);
   useYouTubeEvents(recording.id, {
     onTime: (seconds) => {
       const index = currentMovementIndex(times, seconds);
@@ -149,13 +171,32 @@ export default function RecordingPlayer({
         lastMovement.current = movementId;
         if (movementId) select(movementId, "recording");
       }
+      // Looping: back to the track's start at its end. (Playing along, the
+      // video plays on, and stops at the piece's end by itself.)
+      const { current, jump } = trackJump(
+        tracks,
+        playingTrack.current,
+        seconds,
+        playMode,
+      );
+      playingTrack.current = current;
+      if (playMode === "loop" && typeof jump === "number") seekTo(jump);
     },
-    onEnded,
+    onEnded: () => {
+      // Stopped at the piece's end (or the video's): looping, play its last
+      // track again (loaded afresh, so it stops at the end again); playing
+      // along, on to what comes next; off, stay there.
+      const track =
+        tracks.find((t) => t.id === playingTrack.current) ?? tracks.at(-1);
+      if (playMode === "loop" && track) loadHere(track.start, true);
+      else if (playMode === "along") onEnded?.();
+    },
   });
 
   return (
     <>
       <div className="flex items-center justify-end gap-3 text-sm text-muted">
+        {videoId && <PlayModeToggle />}
         {!editing && (
           <button
             type="button"

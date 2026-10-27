@@ -19,6 +19,7 @@ export default function RecordingsPane({
   performers,
   queue = null,
   likes = {},
+  spanEnds = {},
   initialRecordingId,
 }: {
   workId: string;
@@ -33,7 +34,9 @@ export default function RecordingsPane({
   queue?: Queue | null;
   /** Liked movement ids per recording ("" for a recording's piece). */
   likes?: Record<string, string[]>;
-  /** The recording to show first (from `?recording=`, e.g. the Liked page). */
+  /** Where each YouTube recording ends in its video (e.g. a concert). */
+  spanEnds?: Record<string, number | null>;
+  /** The recording to show first (from `?recording=<slug>`, e.g. the Liked page). */
   initialRecordingId?: string;
 }) {
   const router = useRouter();
@@ -167,6 +170,7 @@ export default function RecordingsPane({
           recording={selected}
           workTitle={workTitle}
           chosen={chosen}
+          end={spanEnds[selected.id]}
           playRequest={
             wholeRequest?.recordingId === selected.id ? wholeRequest.seq : 0
           }
