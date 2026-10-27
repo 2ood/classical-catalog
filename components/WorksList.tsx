@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import GenreFilter from "./GenreFilter";
+import Switch from "./Switch";
 import { plain } from "@/lib/import";
 import { movementLabel, type WorkMovement } from "@/lib/movements";
 import { movementSlug } from "@/lib/slugs";
@@ -71,23 +72,9 @@ export default function WorksList({
           placeholder="Search works or catalogue numbers"
           className="flex-1 text-sm border border-border px-2 py-1 bg-bg focus:outline-none focus:border-text"
         />
-        <button
-          type="button"
-          role="switch"
-          aria-checked={recordedOnly}
-          onClick={() => setRecordedOnly((r) => !r)}
-          className="shrink-0 flex items-center gap-2 text-sm text-muted hover:text-text"
-        >
-          <span
-            aria-hidden
-            className={`w-7 h-4 p-0.5 flex rounded-full transition-colors ${
-              recordedOnly ? "bg-inverse-bg justify-end" : "bg-border"
-            }`}
-          >
-            <span className="w-3 h-3 rounded-full bg-bg" />
-          </span>
+        <Switch checked={recordedOnly} onChange={setRecordedOnly}>
           With recordings
-        </button>
+        </Switch>
       </div>
       {groups.length > 1 && (
         <GenreFilter

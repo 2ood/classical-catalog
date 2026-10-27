@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import GenreFilter from "./GenreFilter";
+import Switch from "./Switch";
 import { plain } from "@/lib/import";
+import { runImport } from "@/lib/import-client";
 import { EPOCHS, type OpenOpusComposer } from "@/lib/openopus";
 
 export type LibraryComposer = OpenOpusComposer & {
@@ -30,6 +32,7 @@ export default function LibraryBrowser({
   const router = useRouter();
   const [epoch, setEpoch] = useState<string | null>(null);
   const [query, setQuery] = useState(initialQuery);
+  const [importedOnly, setImportedOnly] = useState(false);
   const [importing, setImporting] = useState<{
     id: number;
     status: string;
@@ -43,117 +46,109 @@ export default function LibraryBrowser({
   const visible = composers.filter(
     (c) =>
       (!epoch || c.epoch === epoch) &&
+      (!importedOnly || c.imported) &&
       (!q || plain(`${c.completeName} ${c.name}`).includes(q)),
   );
 
   async function handleImport(openOpusId: number) {
     setImporting({ id: openOpusId, status: "Importing…" });
     setError(null);
-    const res = await fetch("/api/library/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ openOpusId }),
+    const failed = await runImport(openOpusId, (message) => {
+      if (message.type === "progress") {
+        const status = `Movements ${message.done} / ${message.total}…`;
+        setImporting({ id: openOpusId, status });
+      } else if (message.type === "error") {
+        setError({
+          id: openOpusId,
+          message: `Works imported, but movements failed: ${message.error}`,
+        });
+      } else if (message.type === "done" && message.movements === null) {
+        setError({
+          id: openOpusId,
+          message:
+            "Works imported, but MusicBrainz has no match for this composer, so no movements were added.",
+        });
+      }
     });
-    if (!res.ok || !res.body) {
-      setImporting(null);
-      const message =
-        (await res.json().catch(() => null))?.error ?? "Failed to import";
-      setError({ id: openOpusId, message });
+    setImporting(null);
+    if (failed) {
+      setError({ id: openOpusId, message: failed });
       return;
     }
-
-    // Newline-delimited JSON: imported, progress…, then done or error.
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop()!;
-      for (const message of lines.filter(Boolean).map((l) => JSON.parse(l))) {
-        if (message.type === "progress") {
-          const status = `Movements ${message.done} / ${message.total}…`;
-          setImporting({ id: openOpusId, status });
-        } else if (message.type === "error") {
-          setError({
-            id: openOpusId,
-            message: `Works imported, but movements failed: ${message.error}`,
-          });
-        } else if (message.type === "done" && message.movements === null) {
-          setError({
-            id: openOpusId,
-            message:
-              "Works imported, but MusicBrainz has no match for this composer, so no movements were added.",
-          });
-        }
-      }
-    }
-    setImporting(null);
     router.refresh();
   }
 
   return (
     <>
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search composers"
-        className={`${input} w-full mb-4 text-sm`}
-      />
+      <div className="flex items-center gap-2 mb-4">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search composers"
+          className={`${input} flex-1 text-sm`}
+        />
+        <Switch checked={importedOnly} onChange={setImportedOnly}>
+          Imported only
+        </Switch>
+      </div>
       <GenreFilter genres={epochs} selected={epoch} onSelect={setEpoch} />
       {visible.length === 0 ? (
         <p className="text-muted">No composers match.</p>
       ) : (
         <ul>
-          {visible.map((c) => (
-            <li
-              key={c.openOpusId}
-              className="flex flex-wrap items-baseline gap-x-3 py-1.5 border-b border-border"
-            >
-              <span>
-                {c.imported ? (
-                  <Link
-                    href={`/composer/${c.imported.slug}`}
-                    className="hover:underline"
-                  >
-                    {c.completeName}
-                  </Link>
-                ) : (
-                  c.completeName
+          {visible.map((c) => {
+            // Not imported yet: dimmed, all but its Import button.
+            const dim = c.imported ? "" : "opacity-35";
+            return (
+              <li
+                key={c.openOpusId}
+                className="flex flex-wrap items-baseline gap-x-3 py-1.5 border-b border-border"
+              >
+                <span className={dim}>
+                  {c.imported ? (
+                    <Link
+                      href={`/composer/${c.imported.slug}`}
+                      className="hover:underline"
+                    >
+                      {c.completeName}
+                    </Link>
+                  ) : (
+                    c.completeName
+                  )}
+                </span>
+                <span className={`text-xs text-muted ${dim}`}>{years(c)}</span>
+                {!epoch && (
+                  <span className={`text-xs text-muted ${dim}`}>{c.epoch}</span>
                 )}
-              </span>
-              <span className="text-xs text-muted">{years(c)}</span>
-              {!epoch && <span className="text-xs text-muted">{c.epoch}</span>}
-              <span className="ml-auto flex items-baseline gap-3 text-sm">
-                {c.imported && (
-                  <span className="text-muted">{c.imported.works} works</span>
+                <span className="ml-auto flex items-baseline gap-3 text-sm">
+                  {c.imported && (
+                    <span className="text-muted">{c.imported.works} works</span>
+                  )}
+                  {importing?.id === c.openOpusId ? (
+                    <span className="text-muted">{importing.status}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleImport(c.openOpusId)}
+                      disabled={importing !== null}
+                      aria-label={`${c.imported ? "Update" : "Import"} ${c.completeName}`}
+                      className={
+                        c.imported
+                          ? "text-muted hover:text-text disabled:opacity-40"
+                          : "px-2 py-0.5 border border-border hover:border-text disabled:opacity-40"
+                      }
+                    >
+                      {c.imported ? "Update" : "Import"}
+                    </button>
+                  )}
+                </span>
+                {error?.id === c.openOpusId && (
+                  <p className="w-full text-sm text-muted">{error.message}</p>
                 )}
-                {importing?.id === c.openOpusId ? (
-                  <span className="text-muted">{importing.status}</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleImport(c.openOpusId)}
-                    disabled={importing !== null}
-                    aria-label={`${c.imported ? "Update" : "Import"} ${c.completeName}`}
-                    className={
-                      c.imported
-                        ? "text-muted hover:text-text disabled:opacity-40"
-                        : "px-2 py-0.5 border border-border hover:border-text disabled:opacity-40"
-                    }
-                  >
-                    {c.imported ? "Update" : "Import"}
-                  </button>
-                )}
-              </span>
-              {error?.id === c.openOpusId && (
-                <p className="w-full text-sm text-muted">{error.message}</p>
-              )}
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </>

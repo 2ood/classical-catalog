@@ -109,6 +109,22 @@ describe("LibraryBrowser", () => {
     expect(names()).toEqual(["Antonín Dvořák"]);
   });
 
+  it("dims the composers not imported", () => {
+    render(<LibraryBrowser composers={composers} />);
+    expect(screen.getByText("John Adams")).toHaveClass("opacity-35");
+    expect(
+      screen.getByRole("link", { name: "Johann Sebastian Bach" }).parentElement,
+    ).not.toHaveClass("opacity-35");
+  });
+
+  it("shows only imported composers with the switch, off at first", () => {
+    render(<LibraryBrowser composers={composers} />);
+    const importedOnly = screen.getByRole("switch", { name: "Imported only" });
+    expect(importedOnly).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(importedOnly);
+    expect(names()).toEqual(["Johann Sebastian Bach"]);
+  });
+
   it("links an imported composer and shows their work count", () => {
     render(<LibraryBrowser composers={composers} />);
     expect(
