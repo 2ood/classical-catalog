@@ -31,6 +31,24 @@ export function extractYouTubeId(input: string): string | null {
   return id && YOUTUBE_ID.test(id) ? id : null;
 }
 
+/**
+ * Where a YouTube link starts, in seconds: `t=754`, `t=754s`, `t=1h2m3s`
+ * (also after `#`) or an embed's `start=95`; null for the beginning. A
+ * piece inside a longer video, e.g. a whole concert, starts there.
+ */
+export function youTubeStart(input: string): number | null {
+  const url = parseUrl(input);
+  if (!url) return null;
+  const hash = new URLSearchParams(url.hash.slice(1));
+  const value =
+    url.searchParams.get("t") ?? hash.get("t") ?? url.searchParams.get("start");
+  const match = value?.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/);
+  if (!match) return null;
+  const [, h = 0, m = 0, s = 0] = match;
+  const seconds = Number(h) * 3600 + Number(m) * 60 + Number(s);
+  return seconds > 0 ? seconds : null;
+}
+
 export function extractSpotifyId(
   input: string,
 ): { type: SpotifyType; id: string } | null {

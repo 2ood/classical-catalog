@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractSpotifyId, extractYouTubeId } from "./media";
+import { extractSpotifyId, extractYouTubeId, youTubeStart } from "./media";
 
 describe("extractYouTubeId", () => {
   it.each([
@@ -26,6 +26,30 @@ describe("extractYouTubeId", () => {
     "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC",
   ])("returns null for %j", (url) => {
     expect(extractYouTubeId(url)).toBeNull();
+  });
+});
+
+describe("youTubeStart", () => {
+  it.each([
+    ["https://youtu.be/dQw4w9WgXcQ?t=754", 754],
+    ["https://youtu.be/dQw4w9WgXcQ?si=abc&t=754s", 754],
+    ["https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1h2m3s", 3723],
+    ["https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=12m", 720],
+    ["https://www.youtube.com/watch?v=dQw4w9WgXcQ#t=1m30s", 90],
+    ["https://www.youtube.com/embed/dQw4w9WgXcQ?start=95", 95],
+    ["https://www.youtube.com/live/dQw4w9WgXcQ?t=3600", 3600],
+  ])("reads where %s starts", (url, seconds) => {
+    expect(youTubeStart(url)).toBe(seconds);
+  });
+
+  it.each([
+    "https://youtu.be/dQw4w9WgXcQ",
+    "https://youtu.be/dQw4w9WgXcQ?t=0",
+    "https://youtu.be/dQw4w9WgXcQ?t=soon",
+    "https://youtu.be/dQw4w9WgXcQ?t=1x",
+    "not a url",
+  ])("returns null for %j", (url) => {
+    expect(youTubeStart(url)).toBeNull();
   });
 });
 
