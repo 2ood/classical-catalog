@@ -12,14 +12,14 @@ Original specification: [classical-catalog-proposal.md](classical-catalog-propos
 - Works list — grouped by genre, sorted by catalogue number, genre filter chips; each work's movements listed under it, opening the player at that movement
 - Suggested recordings — a work without recordings suggests Spotify albums of it; plus a YouTube search link
 - Adding a Spotify recording matches the album's tracks to the work's movements as you paste the link, to check and adjust before saving
-- Search within a composer's works by title or catalogue number, or show only works with recordings
+- Search within a composer's works by title or catalogue number, or show every work, not only those with recordings (the default)
 - Likes (★) for a recording's movements, listed on a Liked page
 - Readable addresses, e.g. `/composer/brahms/klavierstucke-op-118/ii-intermezzo-in-a-dur-andante-teneramente`
 - Player page — PDF score viewer (upload, or search IMSLP) beside a YouTube/Spotify embed
-- Recordings as a track list — each movement (or the piece) with its own play button, the one playing in Spotify green; edit or delete a recording; a movement control beside the work's title moves score and recording together
+- Recordings by movement — the whole work, then each movement, with an avatar per recording that has it (a green dot for Spotify, red for YouTube); click one to play it there, the movement playing in Spotify green; edit or delete the selected recording; a movement control beside the work's title moves score and recording together
 - Performers — recordings linked to performers (orchestras, choirs, people by instrument), with pages, renaming and merging; "Play all" plays a performer's recordings one after another
 - A floating mini player on every page while Spotify plays (previous / next, repeat, like, "Go to current track"); YouTube keeps playing across pages too, floating above it; both minimize to a one-line bar
-- Movements: jump through the score by movement; a YouTube recording seeks to the chosen movement and turns the score as it plays; a Spotify recording loads each movement's track — or, with Spotify Connect, plays it in your Spotify app and turns the score as tracks change
+- Movements: jump through the score by movement; a YouTube recording seeks to the chosen movement (a link with a timestamp, e.g. into a whole concert, starts the piece there) and turns the score as it plays; a Spotify recording loads each movement's track — or, with Spotify Connect, plays it in your Spotify app and turns the score as tracks change
 - PDF scores stored on local disk by composer and work (`storage/scores/<composer>/<work>/<label>.pdf`), served by the app
 - Admin pages for managing composers, works, recordings and scores (planned)
 
@@ -110,7 +110,7 @@ storage/            uploaded PDF scores (git-ignored)
 - Tests live next to the code they test (`lib/media.ts` → `lib/media.test.ts`)
 - No e2e framework — each milestone ends with a manual check against `npm run dev`
 - Prettier formats, ESLint lints (`eslint-config-prettier` resolves conflicts)
-- Monochrome design tokens plus one accent, Spotify green (`accent`), used only for what is playing now — no ad-hoc colors; font weights 400/500 only, never bold
+- Monochrome design tokens plus one accent, Spotify green (`accent`), used only for what is playing now, and two source colors (`spotify`, `youtube`) for the dots on recording avatars — no ad-hoc colors; font weights 400/500 only, never bold
 - Local-only: servers bind to 127.0.0.1 and nothing requires a login
 
 ## Roadmap

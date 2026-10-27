@@ -70,6 +70,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Score PDFs are filed as `storage/scores/<composer>/<work>/<label>.pdf` (file names capped at 40 characters, numbered when taken); `npm run db:scores` moves scores stored under the old generated names, which keep working until then
 - YouTube keeps playing when you leave the work page: one player for the whole app sits over the work page's video area and, elsewhere, floats bottom-right above the Spotify mini player with the work's name (linking back) and ✕; play-through loads each next video into it. Opening another work while a video plays leaves it playing and offers "▶ Play this recording here" (a track's ▶ or picking a recording in the list also takes over); coming back to the playing work shows its recording
 - The floating video and the Spotify mini player minimize (▾) to a one-line bar and expand again (▴); the minimized video keeps playing
+- YouTube links with a timestamp (`t=754`, `t=754s`, `t=1h2m3s`, `#t=…`, an embed's `start=`) start the piece there — e.g. one piece inside a whole concert video — when the recording is played or opened without a movement; movement times stay times in the video
 
 ### Changed
 - Movements now belong to the work: names and order are shared by all its scores and recordings, which each store their own start pages, times or tracks; existing per-score movements were migrated to their works
@@ -84,6 +85,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - In the works list, a movement shows as recorded only when some recording has a start time or track for it
 - The composer page, the Library and the composer cloud are centred in the window
 - The Spotify mini player is stacked bottom-right under the floating YouTube video; the works list's movement toggle (▸ ▾) is larger
+- The works list's "With recordings" is a switch, on by default (off for a composer with no recordings yet)
+- The recordings pane lists the work by movement instead of by performer: a "Whole work" row (every recording) and one row per movement, each with avatars (initials) of the recordings that have it and a dot for their source (Spotify green, YouTube red); a single piece is one row. Clicking an avatar plays that recording there and selects it; the selected recording is named below with its performers, ✎ edit and ✕ delete, and the ★s like its movements, on the rows where it has an avatar
 
 ### Removed
 - The performer tiles (initials) and the recordings pane's Spotify panel with "Play this recording from the start" (replaced by the track list and the mini player)
@@ -100,3 +103,4 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - A YouTube recording now plays after jumping to a movement
 - Scanned scores (JBIG2 images) no longer render as blank pages
 - Component tests no longer see leftover output from earlier tests (Testing Library cleanup now runs after each test)
+- The recording list tests no longer raise "Body has already been read" errors (each mocked fetch returns a fresh response)

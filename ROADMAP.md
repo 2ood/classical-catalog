@@ -8,6 +8,41 @@ _Nothing in progress._
 
 ## Planned
 
+### Milestone 20: Concert videos — link to songs
+Today a recording goes from a work to a link; a whole concert on YouTube needs the other direction: one link, many works (by many composers and performers).
+- [ ] A page for one video: play it, and map timestamps to songs — each span picks its work (any composer), performers, and movement starts within it
+- [ ] Each mapped span becomes (or updates) a recording of its work, sharing the video; the work's pane plays just that span
+- [ ] From any recording with a video, open its concert page
+- To decide when planned: where a span ends (next span's start, or an explicit end), and whether spans are stored as recordings with start/end or as a separate concert table
+- First, before jazz (owner's call 2026-10-27): jazz live sets are whole concerts too, so the span's work picker must take any work, jazz tunes included
+
+### Jazz standards (brainstormed 2026-10-27; Milestones 21–23)
+A second, fully separate catalogue of jazz tunes, listed as in *The Real Book*, each with its many covers. The owner's aim: a guide to which songs there are; exploring performers comes later.
+- Decisions:
+  - All separate: its own entry page (`/jazz`), tune pages, Liked and Performers pages, and its own look (Blue Note: near-black with a saturated blue). The home page stays classical; the header links to Jazz. Only the floating players are shared, so playback goes on across both
+  - A tune is a work (`tradition`: classical / jazz), so recordings, likes, scores, queues and concert spans work unchanged; composers become credits (several per tune, music / lyrics), since one composer per work doesn't hold
+  - Edition: Hal Leonard *The Real Book, Volume I, Sixth Edition* (C) — the legal edition of the original Berklee book and the most widely used. Page numbers must match the owner's own PDF
+  - The book PDF is split at import into one small PDF per tune (start page to the page before the next tune), filed like today's scores, so the viewer is unchanged and nothing big is sent
+  - Index from the PDF's own bookmarks if it has them, else a CSV index (title, page; forScore / MobileSheets style) with an offset for the front matter; credits and year from MusicBrainz
+  - A cover is one track (not an album); suggestions search Spotify tracks
+  - No solo markers within covers (owner's call)
+  - Fonts: try a Real Book–style hand-lettered font (e.g. Petaluma Script) for titles only; drop it if it's hard to read
+- Open: the owner is getting a copy of the book (a legal one: print to scan, or a digital edition)
+
+### Milestone 21: Jazz foundations
+- [ ] Schema: `tradition`, style and Real Book page on works; composer credits table
+- [ ] `/jazz` section with its own layout and Blue Note tokens; header link
+- [ ] Entry page: the tunes A–Z (Real Book order), style chips, search
+- [ ] Tune page: lead sheet beside its covers; jazz Liked and Performers pages
+
+### Milestone 22: Real Book import
+- [ ] Index from the PDF's bookmarks, or a CSV with a page offset
+- [ ] Split into one PDF per tune; credits and year from MusicBrainz
+
+### Milestone 23: Covers
+- [ ] Spotify track suggestions for a tune; covers sorted and filtered (performer, year, liked) on the tune page
+- [ ] Later, secondary: a performer-led view
+
 ### Milestone 14: Admin
 - [ ] `POST /api/composers`, `POST /api/works`, `PATCH`/`DELETE /api/works/[id]`
 - [ ] `/admin` composer dashboard
@@ -15,6 +50,16 @@ _Nothing in progress._
 - [ ] `/admin/work/[id]` — edit work, manage recordings and scores
 
 ## Completed
+
+### Milestone 19: Recordings by movement (completed 2026-10-27)
+Owner's notes 2026-10-27, before planning jazz standards.
+- [x] Works list: "With recordings" as a switch, on by default (off when no work has a recording yet) — test-first
+- [x] YouTube links with a timestamp (`t=754`, `t=1h2m3s`, `#t=`, embed `start=`) start the piece there, e.g. inside a whole concert video; movement times stay times in the video — test-first
+- [x] Recordings pane grouped by movement: "Whole work" row first (every recording), then each movement with avatars (initials) of the recordings that have it, a dot for the source (Spotify green, YouTube red); a single piece is one row. An avatar plays its recording there and selects it; the selected one is named below with performers, ✎ and ✕, and the ★s are its likes, on the rows it has an avatar in — test-first
+- [x] Manual verification checklist — passed (after two fixes: the last avatar's dot made the list scroll sideways; a ★ showed on movements the selected recording doesn't have)
+- Decisions:
+  - The timestamp stays in the stored link (no schema change); a piece inside a concert plays on past its end until Milestone 20 maps where songs end
+  - `spotify` / `youtube` color tokens for the source dots, apart from the accent (which still means only "playing now")
 
 ### Milestone 18: A YouTube player that survives navigation (completed 2026-10-25)
 YouTube stops when you leave the work page, because its video lives in that page; Spotify doesn't, because it plays in the Spotify app (owner's question, 2026-10-25).
