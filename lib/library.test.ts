@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapComposers } from "./library";
+import { composersToImport, mapComposers } from "./library";
 
 const oo = (
   openOpusId: number,
@@ -67,5 +67,34 @@ describe("mapComposers", () => {
 
   it("gives composers not imported yet their built-in schools", () => {
     expect(get("Ravel").schools).toEqual(["Impressionism"]);
+  });
+});
+
+describe("composersToImport", () => {
+  const catalogue = [
+    oo(1, "Chopin", "Frédéric Chopin", "Romantic", 1810, 1849),
+    oo(2, "Schumann", "Robert Schumann", "Romantic", 1810, 1856),
+    oo(3, "C. Schumann", "Clara Schumann", "Romantic", 1819, 1896),
+  ];
+
+  it("offers composers named in the search that aren't imported yet", () => {
+    expect(
+      composersToImport("chopin nocturne", catalogue, new Set()).map(
+        (c) => c.name,
+      ),
+    ).toEqual(["Chopin"]);
+    expect(
+      composersToImport("frederic", catalogue, new Set()).map((c) => c.name),
+    ).toEqual(["Chopin"]);
+  });
+
+  it("leaves out those already imported", () => {
+    expect(
+      composersToImport("schumann", catalogue, new Set([2])).map((c) => c.name),
+    ).toEqual(["C. Schumann"]);
+  });
+
+  it("needs three letters of a name", () => {
+    expect(composersToImport("ch op 15", catalogue, new Set())).toEqual([]);
   });
 });

@@ -1,5 +1,6 @@
 import type { OpenOpusComposer } from "./openopus";
 import { builtInSchools } from "./schools";
+import { searchWords } from "./works";
 
 type LocalComposer = {
   id: string;
@@ -66,4 +67,26 @@ export function mapComposers(
       muted: true,
     };
   });
+}
+
+/**
+ * Open Opus composers named in a search ("chopin nocturne", or the start of
+ * a name: "chop") who aren't imported yet, at most three: offered for
+ * import when the work searched for isn't in the library.
+ */
+export function composersToImport(
+  query: string,
+  catalogue: OpenOpusComposer[],
+  imported: Set<number>,
+): OpenOpusComposer[] {
+  const words = searchWords(query).filter((w) => w.length >= 3);
+  return catalogue
+    .filter(
+      (c) =>
+        !imported.has(c.openOpusId) &&
+        searchWords(c.completeName).some((name) =>
+          words.some((w) => name.startsWith(w)),
+        ),
+    )
+    .slice(0, 3);
 }
