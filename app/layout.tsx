@@ -3,6 +3,7 @@ import { IM_Fell_English, Inter } from "next/font/google";
 import Link from "next/link";
 import { Suspense } from "react";
 import MiniPlayer from "@/components/MiniPlayer";
+import OnePlayerAtATime from "@/components/OnePlayerAtATime";
 import SpotifyPlaybackProvider from "@/components/SpotifyPlayback";
 import YouTubeDockProvider from "@/components/YouTubeDock";
 import "./globals.css";
@@ -52,12 +53,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <Link href="/performers" className="text-muted hover:text-text">
                   Performers
                 </Link>
+                <Link href="/concerts" className="text-muted hover:text-text">
+                  Concerts
+                </Link>
                 <Link href="/library" className="text-muted hover:text-text">
                   Library
                 </Link>
               </nav>
             </header>
             {children}
+            <OnePlayerAtATime />
           </YouTubeDockProvider>
         </SpotifyPlaybackProvider>
       </body>

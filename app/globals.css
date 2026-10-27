@@ -10,6 +10,8 @@
   --color-inverse-text: #ffffff;
   /* The one accent: Spotify green, for what is playing now. */
   --color-accent: #1db954;
+  /* A light mint of it, behind a player that is playing. */
+  --color-accent-tint: #e8f8ee;
   /* A recording's source, as a dot on its avatar. */
   --color-spotify: #1db954;
   --color-youtube: #ff0000;

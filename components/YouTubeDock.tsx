@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import LoopIcon from "./LoopIcon";
+import { MinimizeButton, MinimizedBar } from "./PlayerBar";
+import type { PlayMode } from "@/lib/playback";
 import {
   createContext,
   use,
@@ -9,17 +12,23 @@ import {
   useEffectEvent,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 
 // The small part of the YouTube IFrame API this app uses.
-type VideoRequest = { videoId: string; startSeconds: number };
+// With endSeconds the video stops (and ends) there.
+type VideoRequest = {
+  videoId: string;
+  startSeconds: number;
+  endSeconds?: number;
+};
 type YTPlayer = {
   loadVideoById(request: VideoRequest): void;
   cueVideoById(request: VideoRequest): void;
   seekTo(seconds: number, allowSeekAhead: boolean): void;
   playVideo(): void;
-  stopVideo(): void;
+  pauseVideo(): void;
   getCurrentTime(): number;
   getPlayerState(): number;
   destroy(): void;
@@ -95,6 +104,87 @@ export function shouldLoad(
   return chosen || !loaded || loaded.status !== "playing";
 }
 
+/** Where the floating players sit; dragged to any corner. */
+export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+// Below the 3rem header at the top.
+const CORNER_CLASS: Record<Corner, string> = {
+  "top-left": "top-16 left-4",
+  "top-right": "top-16 right-4",
+  "bottom-left": "bottom-4 left-4",
+  "bottom-right": "bottom-4 right-4",
+};
+
+/** The corner of a w×h window nearest to (x, y). */
+export function nearestCorner(x: number, y: number, w: number, h: number) {
+  return `${y < h / 2 ? "top" : "bottom"}-${x < w / 2 ? "left" : "right"}` as Corner;
+}
+
+// The furthest the players stretch, however far they are pulled.
+const STRETCH = 48;
+
+/** How far the players stretch for a pull of `d` px: less and less. */
+export function rubberBand(d: number) {
+  return (
+    Math.sign(d) * STRETCH * (1 - 1 / ((Math.abs(d) * 0.35) / STRETCH + 1))
+  );
+}
+
+/**
+ * A choice kept in this browser's storage, shared by every component that
+ * reads it (a convenience: the fallback without storage).
+ */
+function localSetting<T extends string>(
+  key: string,
+  values: readonly T[],
+  fallback: T,
+) {
+  const listeners = new Set<() => void>();
+  return {
+    fallback,
+    read(): T {
+      try {
+        const saved = localStorage.getItem(key);
+        if (saved && values.includes(saved as T)) return saved as T;
+      } catch {}
+      return fallback;
+    },
+    save(value: T) {
+      try {
+        localStorage.setItem(key, value);
+      } catch {}
+      for (const listener of listeners) listener();
+    },
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+}
+
+function useSetting<T extends string>(
+  setting: ReturnType<typeof localSetting<T>>,
+) {
+  return useSyncExternalStore(
+    setting.subscribe,
+    setting.read,
+    () => setting.fallback,
+  );
+}
+
+const cornerSetting = localSetting<Corner>(
+  "players-corner",
+  ["top-left", "top-right", "bottom-left", "bottom-right"],
+  "bottom-right",
+);
+const modeSetting = localSetting<PlayMode>(
+  "play-mode",
+  ["along", "loop", "off"],
+  "along",
+);
+
 type Listener = {
   recordingId: string;
   onTime: (seconds: number) => void;
@@ -107,10 +197,14 @@ type YouTubeDock = {
   /** Loads a video into the one player, cued or playing. */
   load: (
     video: DockedVideo,
-    options: { start?: number; autoplay: boolean },
+    options: { start?: number; end?: number; autoplay: boolean },
   ) => void;
   seekTo: (seconds: number) => void;
   play: () => void;
+  pause: () => void;
+  /** Play along (on to the next track), loop the current track, or off. */
+  playMode: PlayMode;
+  setPlayMode: (mode: PlayMode) => void;
   /** Playback position in seconds, or null before the video is ready. */
   currentTime: () => number | null;
   /** Ref for the area the loaded video is shown over (its work page). */
@@ -211,17 +305,21 @@ export default function YouTubeDockProvider({
           const seconds = p.getCurrentTime();
           notify((l) => l.onTime(seconds));
         }
-      }, 1000);
+      }, 250); // Often enough to jump at a track's end in time.
     });
   }, [flush, notify]);
 
   const load = useCallback<YouTubeDock["load"]>(
-    (next, { start = 0, autoplay }) => {
+    (next, { start = 0, end, autoplay }) => {
       videoRef.current = next;
       setVideo(next);
       setStatus("cued");
       pending.current = {
-        request: { videoId: next.videoId, startSeconds: start },
+        request: {
+          videoId: next.videoId,
+          startSeconds: start,
+          ...(end !== undefined && { endSeconds: end }),
+        },
         autoplay,
       };
       if (playerRef.current) flush();
@@ -233,6 +331,11 @@ export default function YouTubeDockProvider({
   const seekTo = useCallback((seconds: number) => {
     if (pending.current) pending.current.request.startSeconds = seconds;
     else playerRef.current?.seekTo(seconds, true);
+  }, []);
+
+  const pause = useCallback(() => {
+    if (pending.current) pending.current.autoplay = false;
+    else playerRef.current?.pauseVideo();
   }, []);
 
   const play = useCallback(() => {
@@ -247,12 +350,48 @@ export default function YouTubeDockProvider({
   );
 
   const [minimized, setMinimized] = useState(false);
-
-  const close = () => {
-    pending.current = null;
-    playerRef.current?.stopVideo();
-    videoRef.current = null;
-    setVideo(null);
+  const corner = useSetting(cornerSetting);
+  const playMode = useSetting(modeSetting);
+  // Dragging the stack: in the corner the drag began, it stretches toward
+  // the pointer; over another corner, it moves there at once (and sits
+  // still); let go, it springs back into its corner. Only once the pointer
+  // moves (so a click stays a click), and the click ending it is no click.
+  const dragStart = useRef<{ x: number; y: number; corner: Corner } | null>(
+    null,
+  );
+  const dragged = useRef(false);
+  const [pull, setPull] = useState<{ x: number; y: number } | null>(null);
+  const stretched = pull
+    ? { translate: `${rubberBand(pull.x)}px ${rubberBand(pull.y)}px` }
+    : undefined;
+  // Springs back (with a little overshoot) when let go.
+  const spring = pull
+    ? ""
+    : "transition-[translate] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]";
+  const drag = (e: React.PointerEvent) => {
+    const start = dragStart.current;
+    if (!start) return;
+    if (!dragged.current) {
+      if (Math.hypot(e.clientX - start.x, e.clientY - start.y) < 4) return;
+      dragged.current = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    }
+    const next = nearestCorner(
+      e.clientX,
+      e.clientY,
+      window.innerWidth,
+      window.innerHeight,
+    );
+    if (next !== corner) cornerSetting.save(next);
+    setPull(
+      next === start.corner
+        ? { x: e.clientX - start.x, y: e.clientY - start.y }
+        : { x: 0, y: 0 },
+    );
+  };
+  const endDrag = () => {
+    dragStart.current = null;
+    setPull(null);
   };
 
   const slot = useCallback((element: HTMLElement | null) => {
@@ -310,23 +449,52 @@ export default function YouTubeDockProvider({
         load,
         seekTo,
         play,
+        pause,
+        playMode,
+        setPlayMode: modeSetting.save,
         currentTime,
         slot,
         listeners,
       }}
     >
       {children}
-      {/* Bottom-right: the floating video above the rest (the mini player). */}
-      <div className="fixed bottom-4 right-4 z-50 w-80 flex flex-col gap-2">
+      {/* In a corner: the floating video above the rest (the mini player). */}
+      <div
+        role="region"
+        aria-label="Players"
+        onPointerDown={(e) => {
+          const control = "a, button:not([data-drag]), input, select";
+          if ((e.target as Element).closest(control)) return;
+          dragStart.current = { x: e.clientX, y: e.clientY, corner };
+          dragged.current = false;
+        }}
+        onClickCapture={(e) => {
+          if (!dragged.current) return;
+          dragged.current = false;
+          e.stopPropagation();
+        }}
+        onPointerMove={drag}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        className={`fixed ${CORNER_CLASS[corner]} z-50 w-80 flex flex-col gap-2 cursor-grab touch-none select-none`}
+      >
+        {/* Each part stretches on its own, not the stack: a moved stack
+            would carry the video shown over its work page with it. */}
         <div
           aria-hidden={mode === "hidden" || undefined}
-          style={mode === "slot" && box ? { ...box } : undefined}
+          style={
+            mode === "slot" && box
+              ? { ...box }
+              : mode === "float"
+                ? stretched
+                : undefined
+          }
           className={
             mode === "slot"
               ? "fixed"
               : mode === "hidden"
                 ? "fixed bottom-4 right-4 w-80 aspect-video invisible pointer-events-none"
-                : "flex flex-col bg-bg border border-border rounded-md shadow-lg overflow-hidden"
+                : `flex flex-col ${status === "playing" ? "bg-accent-tint" : "bg-bg"} border border-border rounded-md shadow-lg overflow-hidden ${spring}`
           }
         >
           {/* Shrunk, not removed, when minimized: the sound plays on. */}
@@ -335,42 +503,46 @@ export default function YouTubeDockProvider({
             className={
               mode !== "float"
                 ? "w-full h-full"
-                : minimized
-                  ? "order-2 h-0 overflow-hidden"
-                  : "order-2 w-full aspect-video"
+                : // Folds, animated; 16:9 of the stack's w-80.
+                  `order-2 w-full overflow-hidden transition-[height] duration-200 ease-out ${
+                    minimized ? "h-0" : "h-45"
+                  }`
             }
           />
-          {mode === "float" && video && (
-            <div className="order-1 flex items-center gap-2 px-3 py-1.5 text-sm">
-              <Link
-                href={video.href}
-                className="flex-1 min-w-0 truncate hover:underline"
+          {mode === "float" &&
+            video &&
+            (minimized ? (
+              <MinimizedBar
+                playing={status === "playing"}
+                onPlayPause={status === "playing" ? pause : play}
+                subject="the video"
+                expandLabel="Expand the video"
+                onExpand={() => setMinimized(false)}
+                className="order-1 px-3 py-1.5 text-sm"
               >
                 {video.title}
-              </Link>
-              <button
-                type="button"
-                aria-label={
-                  minimized ? "Expand the video" : "Minimize the video"
-                }
-                aria-expanded={!minimized}
-                onClick={() => setMinimized((m) => !m)}
-                className="text-base leading-none text-muted hover:text-text"
-              >
-                {minimized ? "▴" : "▾"}
-              </button>
-              <button
-                type="button"
-                aria-label="Close the video"
-                onClick={close}
-                className="text-muted hover:text-text"
-              >
-                ✕
-              </button>
-            </div>
-          )}
+              </MinimizedBar>
+            ) : (
+              <div className="order-1 flex items-center gap-2 px-3 py-1.5 text-sm">
+                <Link
+                  href={video.href}
+                  className="flex-1 min-w-0 truncate hover:underline"
+                >
+                  {video.title}
+                </Link>
+                <PlayModeToggle />
+                <MinimizeButton
+                  label="Minimize the video"
+                  onClick={() => setMinimized(true)}
+                />
+              </div>
+            ))}
         </div>
-        {below}
+        {below && (
+          <div style={stretched} className={`empty:hidden ${spring}`}>
+            {below}
+          </div>
+        )}
       </div>
     </DockContext>
   );
@@ -411,4 +583,33 @@ export function useYouTubeEvents(
       listeners.delete(listener);
     };
   }, [listeners, recordingId]);
+}
+
+const MODES: Record<PlayMode, { name: string; title: string }> = {
+  along: { name: "play along", title: "Playing on to the next track" },
+  loop: { name: "loop the track", title: "Looping the track playing" },
+  off: { name: "off", title: "Neither playing on nor looping" },
+};
+const NEXT_MODE: Record<PlayMode, PlayMode> = {
+  along: "loop",
+  loop: "off",
+  off: "along",
+};
+
+/** Plays along, loops the track playing, or neither: in turn. */
+export function PlayModeToggle() {
+  const { playMode, setPlayMode } = useYouTube();
+  return (
+    <button
+      type="button"
+      aria-label={`Play mode: ${MODES[playMode].name}`}
+      title={MODES[playMode].title}
+      onClick={() => setPlayMode(NEXT_MODE[playMode])}
+      className={`shrink-0 hover:opacity-70 ${
+        playMode === "off" ? "text-muted" : "text-accent"
+      }`}
+    >
+      <LoopIcon one={playMode === "loop"} />
+    </button>
+  );
 }

@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MiniPlayer from "./MiniPlayer";
 import SpotifyPlaybackProvider from "./SpotifyPlayback";
@@ -156,6 +162,9 @@ describe("MiniPlayer", () => {
         pressed: true,
       }),
     );
+    expect(
+      screen.getByRole("button", { name: "Repeat this track" }),
+    ).toHaveTextContent("1");
     await waitFor(() =>
       expect(posts("/api/spotify/control")).toEqual([{ action: "repeat-off" }]),
     );
@@ -199,16 +208,20 @@ describe("MiniPlayer", () => {
     ).toHaveAttribute("href", "/api/spotify/login?returnTo=%2F");
   });
 
-  it("minimizes to the track's name, and expands again", async () => {
+  it("minimizes to ⏯ and the track's name, and expands on a click anywhere", async () => {
     serve(playing());
     renderMini();
-    await screen.findByText("Symphony No. 5: II. Andante con moto");
     fireEvent.click(
-      screen.getByRole("button", { name: "Minimize the player" }),
+      await screen.findByRole("button", { name: "Minimize the player" }),
     );
     expect(
-      screen.getByText("Symphony No. 5: II. Andante con moto"),
-    ).toBeTruthy();
+      screen.queryByRole("button", { name: "Repeat this track" }),
+    ).toBeNull();
+    const box = screen.getByRole("complementary", { name: "Now playing" });
+    // ⏯ first, and it doesn't expand.
+    expect(within(box).getAllByRole("button")[0]).toHaveAccessibleName("Pause");
+    fireEvent.click(within(box).getByRole("button", { name: "Pause" }));
+    await waitFor(() => expect(posts("/api/spotify/pause")).toHaveLength(1));
     expect(
       screen.queryByRole("button", { name: "Repeat this track" }),
     ).toBeNull();
@@ -219,14 +232,100 @@ describe("MiniPlayer", () => {
     ).toBeTruthy();
   });
 
-  it("disconnects Spotify", async () => {
+  it("folds away, animated, rather than vanishing", async () => {
     serve(playing());
     renderMini();
+    const controls = await screen.findByRole("group", { name: "Controls" });
     fireEvent.click(
-      await screen.findByRole("button", { name: "Disconnect Spotify" }),
+      screen.getByRole("button", { name: "Minimize the player" }),
     );
+    const fold = controls.closest("[aria-hidden]")!;
+    expect(fold).toHaveAttribute("aria-hidden", "true");
+    expect(fold).toHaveClass(
+      "grid-rows-[0fr]",
+      "transition-[grid-template-rows,opacity]",
+    );
+  });
+
+  it("keeps its minimize button in the top-right corner", async () => {
+    serve(playing());
+    renderMini();
+    expect(
+      await screen.findByRole("button", { name: "Minimize the player" }),
+    ).toHaveClass("self-start");
+  });
+
+  it("resumes from the minimized player", async () => {
+    serve(playing(false));
+    renderMini();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Minimize the player" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Play" }));
     await waitFor(() =>
-      expect(posts("/api/spotify/disconnect")).toHaveLength(1),
+      expect(posts("/api/spotify/play")).toEqual([{ resume: true }]),
     );
+  });
+
+  it("has no Disconnect for now (it moves to settings with logins)", async () => {
+    serve(playing());
+    renderMini();
+    await screen.findByRole("complementary", { name: "Now playing" });
+    expect(screen.queryByRole("button", { name: /Disconnect/ })).toBeNull();
+  });
+
+  it("centers its controls: like, previous, play, next, repeat", async () => {
+    serve(playing());
+    renderMini();
+    const controls = await screen.findByRole("group", { name: "Controls" });
+    expect(controls).toHaveClass("justify-center");
+    expect(
+      within(controls)
+        .getAllByRole("button")
+        .map((b) => b.getAttribute("aria-label")),
+    ).toEqual([
+      "Like on Spotify",
+      "Previous track",
+      "Pause",
+      "Next track",
+      "Repeat this track",
+    ]);
+  });
+
+  it("shows repeating by the loop-one icon's color", async () => {
+    serve(playing(true, "off"));
+    renderMini();
+    const repeat = await screen.findByRole("button", {
+      name: "Repeat this track",
+    });
+    expect(repeat.querySelector("svg")).toHaveTextContent("1");
+    expect(repeat).toHaveClass("text-muted");
+    expect(repeat).not.toHaveClass("text-accent");
+  });
+
+  it("colors the loop-one icon while repeating", async () => {
+    serve(playing(true, "track"));
+    renderMini();
+    const repeat = await screen.findByRole("button", {
+      name: "Repeat this track",
+      pressed: true,
+    });
+    expect(repeat).toHaveClass("text-accent");
+  });
+
+  it("is tinted while playing", async () => {
+    serve(playing());
+    renderMini();
+    expect(
+      await screen.findByRole("complementary", { name: "Now playing" }),
+    ).toHaveClass("bg-accent-tint");
+  });
+
+  it("isn't tinted while paused", async () => {
+    serve(playing(false));
+    renderMini();
+    expect(
+      await screen.findByRole("complementary", { name: "Now playing" }),
+    ).not.toHaveClass("bg-accent-tint");
   });
 });
