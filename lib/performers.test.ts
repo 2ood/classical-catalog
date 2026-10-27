@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   byInstrument,
   guessKind,
+  matchPerformers,
   parsePerformerEdit,
   resolvePerformers,
   splitPerformers,
@@ -131,5 +132,66 @@ describe("byInstrument", () => {
       ["Mezzo-soprano", ["Cecilia Bartoli"]],
       ["Other", ["Lang Lang"]],
     ]);
+  });
+});
+
+describe("matchPerformers", () => {
+  const known = [
+    { id: "cho", name: "Seong-Jin Cho", aliases: [] },
+    { id: "paik", name: "Kun-Woo Paik", aliases: [] },
+    { id: "horowitz", name: "Vladimir Horowitz", aliases: [] },
+    { id: "kissin", name: "Evgeny Kissin", aliases: [] },
+    { id: "karajan", name: "Herbert von Karajan", aliases: ["Karajan"] },
+    { id: "bpo", name: "Berliner Philharmoniker", aliases: ["BPO"] },
+    { id: "barenboim", name: "Daniel Barenboim", aliases: [] },
+    { id: "rachmaninoff", name: "Sergei Rachmaninoff", aliases: [] },
+    { id: "zimerman", name: "Krystian Zimerman", aliases: [] },
+  ];
+  const first = (query: string) => matchPerformers(query, known)[0]?.id;
+
+  it.each([
+    ["seong-jin cho", "cho"],
+    ["seongjin cho", "cho"],
+    ["sungjin jo", "cho"],
+    ["cho seong jin", "cho"],
+    ["kunwoo paik", "paik"],
+    ["paik kun woo", "paik"],
+    ["baek gunwoo", "paik"],
+    ["horovitz", "horowitz"],
+    ["wladimir horowits", "horowitz"],
+    ["evgenii kisin", "kissin"],
+    ["yevgeny kissin", "kissin"],
+    ["karajan", "karajan"],
+    ["bpo", "bpo"],
+    ["daneiel barenboim", "barenboim"],
+    ["rakhmaninov", "rachmaninoff"],
+    ["zimmermann", "zimerman"],
+  ])("finds %s", (query, id) => {
+    expect(first(query)).toBe(id);
+  });
+
+  it("finds a name from its first letters, as it is typed", () => {
+    expect(first("horo")).toBe("horowitz");
+    expect(first("vladimir h")).toBe("horowitz");
+  });
+
+  it("puts a whole name before names it only begins", () => {
+    const more = [
+      ...known,
+      { id: "joachim", name: "Joachim Kerol", aliases: [] },
+      { id: "pekka", name: "Esa-Pekka Salonen", aliases: [] },
+    ];
+    expect(matchPerformers("cho", more)[0].id).toBe("cho");
+    expect(matchPerformers("paik", more)[0].id).toBe("paik");
+  });
+
+  it("lists each performer once, best first", () => {
+    const found = matchPerformers("karajan", known);
+    expect(found.filter((p) => p.id === "karajan")).toHaveLength(1);
+  });
+
+  it("finds nothing like an unrelated name", () => {
+    expect(matchPerformers("martha argerich", known)).toEqual([]);
+    expect(matchPerformers("", known)).toEqual([]);
   });
 });

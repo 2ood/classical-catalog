@@ -78,6 +78,102 @@ export function resolvePerformers(
   return { ids, created };
 }
 
+// Spellings that sound alike in romanized names, in order: Korean
+// (Seong/Sung, Cho/Jo, Paik/Baek), Russian (Vladimir/Wladimir,
+// Rachmaninoff/Rakhmaninov, Yevgeny/Evgenii), German (Zimmermann).
+const SOUNDS: [RegExp, string][] = [
+  [/^y(?=[aeiou])/, ""],
+  [/y/g, "i"],
+  [/t?sch|tch/g, "ch"],
+  [/kh/g, "h"],
+  [/ch|zh|dzh|dj/g, "j"],
+  [/sh/g, "s"],
+  [/ph/g, "f"],
+  [/ck|qu/g, "k"],
+  [/x/g, "ks"],
+  [/t[sz]/g, "s"],
+  [/eo/g, "o"],
+  [/eu|oo|ou/g, "u"],
+  [/ae|ai/g, "e"],
+  [/ei/g, "i"],
+  [/[cgq]/g, "k"],
+  [/b/g, "p"],
+  [/d/g, "t"],
+  [/[vw]/g, "f"],
+  [/z/g, "s"],
+  [/(?!^)h/g, ""],
+  [/(.)+/g, "$1"],
+];
+
+/** A word as it sounds, roughly: "Wladimir" and "Vladimir" alike. */
+function sound(word: string): string {
+  return SOUNDS.reduce((w, [from, to]) => w.replace(from, to), word);
+}
+
+const words = (name: string) =>
+  plain(name).split(" ").filter(Boolean).map(sound);
+
+function distance(a: string, b: string): number {
+  let row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const next = [i];
+    for (let j = 1; j <= b.length; j++) {
+      next[j] = Math.min(
+        row[j] + 1,
+        next[j - 1] + 1,
+        row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    row = next;
+  }
+  return row[b.length];
+}
+
+/**
+ * 1 for the same, a little less where `typed` begins `name` (still being
+ * typed), down to 0 for nothing alike.
+ */
+function likeness(typed: string, name: string): number {
+  if (name.startsWith(typed)) return 0.85 + (0.15 * typed.length) / name.length;
+  return 1 - distance(typed, name) / Math.max(typed.length, name.length);
+}
+
+/** How well a typed name matches a performer's name, 0–1. */
+function score(typed: string[], name: string[]): number {
+  // Word by word, in any order (Cho Seong-Jin)…
+  const byWord =
+    typed.reduce(
+      (sum, t) => sum + Math.max(...name.map((n) => likeness(t, n))),
+      0,
+    ) / typed.length;
+  // …or run together (Seongjin, Kunwoo).
+  return Math.max(byWord, likeness(typed.join(""), name.join("")));
+}
+
+const ENOUGH = 0.7;
+
+/**
+ * Known performers like a typed name, best first, forgiving misspellings
+ * and other romanizations ("sungjin jo" finds Seong-Jin Cho).
+ */
+export function matchPerformers<
+  P extends { id: string; name: string; aliases: string[] },
+>(query: string, known: P[], limit = 8): P[] {
+  const typed = words(query);
+  if (typed.length === 0) return [];
+  return known
+    .map((p) => ({
+      p,
+      score: Math.max(
+        ...[p.name, ...p.aliases].map((n) => score(typed, words(n))),
+      ),
+    }))
+    .filter((m) => m.score >= ENOUGH)
+    .sort((a, b) => b.score - a.score || a.p.name.localeCompare(b.p.name))
+    .slice(0, limit)
+    .map((m) => m.p);
+}
+
 const MAX_NAME = 120;
 
 /**
