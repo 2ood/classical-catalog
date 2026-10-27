@@ -42,7 +42,10 @@ export default function WorksList({
 }) {
   const [genre, setGenre] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [recordedOnly, setRecordedOnly] = useState(false);
+  // On, unless that would leave nothing to show.
+  const [recordedOnly, setRecordedOnly] = useState(() =>
+    works.some((w) => w.hasRecording),
+  );
   // Movements are shown unless folded away.
   const [folded, setFolded] = useState<Set<string>>(() => new Set());
   const groups = groupByGenre(works);
@@ -70,14 +73,19 @@ export default function WorksList({
         />
         <button
           type="button"
-          aria-pressed={recordedOnly}
+          role="switch"
+          aria-checked={recordedOnly}
           onClick={() => setRecordedOnly((r) => !r)}
-          className={`shrink-0 px-2 py-1 rounded-sm text-sm ${
-            recordedOnly
-              ? "bg-inverse-bg text-inverse-text"
-              : "bg-bg border border-border text-muted hover:text-text"
-          }`}
+          className="shrink-0 flex items-center gap-2 text-sm text-muted hover:text-text"
         >
+          <span
+            aria-hidden
+            className={`w-7 h-4 p-0.5 flex rounded-full transition-colors ${
+              recordedOnly ? "bg-inverse-bg justify-end" : "bg-border"
+            }`}
+          >
+            <span className="w-3 h-3 rounded-full bg-bg" />
+          </span>
           With recordings
         </button>
       </div>

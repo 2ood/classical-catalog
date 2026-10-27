@@ -44,10 +44,18 @@ const works = [
 // Rows render "Title, Key" as one text node.
 const title = (t: string) => new RegExp(`^${t}(,|$)`);
 const row = (t: string) => screen.getByText(title(t)).closest("a")!;
+const recordedOnly = () =>
+  screen.getByRole("switch", { name: "With recordings" });
+
+/** Every work, with or without recordings (the switch turned off). */
+function renderAll() {
+  render(<WorksList composerSlug="mozart" works={works} />);
+  fireEvent.click(recordedOnly());
+}
 
 describe("WorksList", () => {
   it("renders genre groups in order, each sorted by catalogue number", () => {
-    render(<WorksList composerSlug="mozart" works={works} />);
+    renderAll();
     const headings = screen.getAllByRole("heading").map((h) => h.textContent);
     expect(headings).toEqual(["Serenade", "Symphony"]);
     const symphonies = within(
@@ -60,7 +68,7 @@ describe("WorksList", () => {
   });
 
   it("links each row to the work page", () => {
-    render(<WorksList composerSlug="mozart" works={works} />);
+    renderAll();
     expect(row("Symphony No. 40")).toHaveAttribute(
       "href",
       "/composer/mozart/symphony-no-40-k-550",
@@ -68,7 +76,7 @@ describe("WorksList", () => {
   });
 
   it("marks works with recordings with a dot and fades the rest", () => {
-    render(<WorksList composerSlug="mozart" works={works} />);
+    renderAll();
     expect(
       within(row("Symphony No. 40")).getByLabelText("Has recordings"),
     ).toBeInTheDocument();
@@ -80,7 +88,7 @@ describe("WorksList", () => {
   });
 
   it("filters to one genre with the chips and back to all", () => {
-    render(<WorksList composerSlug="mozart" works={works} />);
+    renderAll();
     const all = screen.getByRole("button", { name: "All" });
     const serenade = screen.getByRole("button", { name: "Serenade" });
     expect(all).toHaveAttribute("aria-pressed", "true");
@@ -98,7 +106,7 @@ describe("WorksList", () => {
   });
 
   it("lists each work's movements under it, opening the player there", () => {
-    render(<WorksList composerSlug="mozart" works={works} />);
+    renderAll();
     const andante = screen.getByRole("link", { name: "II. Andante" });
     expect(andante).toHaveAttribute(
       "href",
@@ -111,7 +119,7 @@ describe("WorksList", () => {
   });
 
   it("fades movements no recording has a start for", () => {
-    render(<WorksList composerSlug="mozart" works={works} />);
+    renderAll();
     expect(
       screen.getByRole("link", { name: "I. Molto allegro" }),
     ).not.toHaveClass("opacity-35");
@@ -121,7 +129,7 @@ describe("WorksList", () => {
   });
 
   it("folds a work's movements away and back", () => {
-    render(<WorksList composerSlug="mozart" works={works} />);
+    renderAll();
     const toggle = screen.getByRole("button", {
       name: "Movements of Symphony No. 40",
     });
@@ -138,14 +146,14 @@ describe("WorksList", () => {
   });
 
   it("has no fold toggle for works without movements", () => {
-    render(<WorksList composerSlug="mozart" works={works} />);
+    renderAll();
     expect(
       screen.queryByRole("button", { name: "Movements of Symphony No. 7" }),
     ).toBeNull();
   });
 
   it("searches works by title or catalogue number", () => {
-    render(<WorksList composerSlug="mozart" works={works} />);
+    renderAll();
     const search = screen.getByRole("searchbox", { name: "Search works" });
 
     fireEvent.change(search, { target: { value: "nachtmusik" } });
@@ -163,18 +171,27 @@ describe("WorksList", () => {
     expect(screen.getByText("No works match.")).toBeInTheDocument();
   });
 
-  it("shows only works with recordings when asked", () => {
+  it("shows only works with recordings at first, switchable off", () => {
     render(<WorksList composerSlug="mozart" works={works} />);
-    const toggle = screen.getByRole("button", { name: "With recordings" });
-    expect(toggle).toHaveAttribute("aria-pressed", "false");
-
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    const toggle = recordedOnly();
+    expect(toggle).toHaveAttribute("aria-checked", "true");
     expect(screen.getByText(title("Symphony No. 40"))).toBeInTheDocument();
     expect(screen.queryByText(title("Symphony No. 7"))).toBeNull();
     expect(screen.queryByText(title("Eine kleine Nachtmusik"))).toBeNull();
 
     fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByText(title("Symphony No. 7"))).toBeInTheDocument();
+  });
+
+  it("starts with every work when none has recordings yet", () => {
+    render(
+      <WorksList
+        composerSlug="mozart"
+        works={works.filter((w) => !w.hasRecording)}
+      />,
+    );
+    expect(recordedOnly()).toHaveAttribute("aria-checked", "false");
     expect(screen.getByText(title("Symphony No. 7"))).toBeInTheDocument();
   });
 
